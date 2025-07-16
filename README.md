@@ -22,7 +22,7 @@ pip install readwise-twos-sync
 
 ### From Source
 ```bash
-git clone https://github.com/yourusername/readwise-twos-sync.git
+git clone https://github.com/jordankuhns/readwise-twos-sync.git
 cd readwise-twos-sync
 pip install -e .
 ```
@@ -36,9 +36,9 @@ You'll need API tokens from both services:
 2. Copy your access token
 
 ### Twos API Credentials
-1. Open your Twos app
-2. Go to Settings → API
-3. Copy your User ID and API Token
+1. Go to [twosapp.com] (https://www.twosapp.com/640c7f5bb61a830a4b982e80)
+2. Follow the instructions to retrieve your Twos API information.
+3. Copy the Twos User and API data from those instructions.
 
 ### Environment Variables
 

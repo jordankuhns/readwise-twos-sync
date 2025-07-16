@@ -10,8 +10,8 @@ long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists
 setup(
     name="readwise-twos-sync",
     version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Jordan Kuhns",
+    author_email="jkuhns13@gmail.com",
     description="Sync Readwise highlights to Twos app",
     long_description=long_description,
     long_description_content_type="text/markdown",
