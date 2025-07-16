@@ -36,7 +36,7 @@ You'll need API tokens from both services:
 2. Copy your access token
 
 ### Twos API Credentials
-1. Go to [twosapp.com] (https://www.twosapp.com/640c7f5bb61a830a4b982e80)
+1. Go to [twosapp.com](https://www.twosapp.com/640c7f5bb61a830a4b982e80)
 2. Follow the instructions to retrieve your Twos API information.
 3. Copy the Twos User and API data from those instructions.
 
