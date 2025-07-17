@@ -12,6 +12,8 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
@@ -121,6 +123,58 @@ def root():
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
+
+@app.route('/debug')
+def debug():
+    """Debug endpoint to check if the app is running."""
+    logger.info("Debug endpoint called")
+    
+    # Get all users
+    users = User.query.all()
+    user_count = len(users)
+    
+    # Get all credentials
+    creds = ApiCredential.query.all()
+    cred_count = len(creds)
+    
+    # Get all sync logs
+    logs = SyncLog.query.all()
+    log_count = len(logs)
+    
+    return jsonify({
+        'message': 'Debug endpoint',
+        'user_count': user_count,
+        'credential_count': cred_count,
+        'log_count': log_count,
+        'users': [
+            {
+                'id': user.id,
+                'email': user.email,
+                'sync_enabled': user.sync_enabled,
+                'sync_time': user.sync_time,
+                'sync_frequency': user.sync_frequency
+            }
+            for user in users
+        ],
+        'credentials': [
+            {
+                'id': cred.id,
+                'user_id': cred.user_id,
+                'twos_user_id': cred.twos_user_id
+            }
+            for cred in creds
+        ],
+        'logs': [
+            {
+                'id': log.id,
+                'user_id': log.user_id,
+                'status': log.status,
+                'highlights_synced': log.highlights_synced,
+                'created_at': log.created_at.isoformat() if log.created_at else None
+            }
+            for log in logs[:10]  # Only show the 10 most recent logs
+        ]
+    })
 
 @app.route('/api/auth/register', methods=['POST', 'OPTIONS'])
 def register():
@@ -851,9 +905,218 @@ def get_user_profile():
         logger.error(f"Error getting user profile: {str(e)}")
         return jsonify({"error": f"Failed to get user profile: {str(e)}"}), 500
 
+# ---- Scheduler Functions ----
+
+def schedule_sync_job(user_id):
+    """Schedule a daily sync job for a user."""
+    user = User.query.get(user_id)
+    
+    if not user or not user.sync_enabled:
+        return
+    
+    # Parse sync time (format: "HH:MM")
+    hour, minute = map(int, user.sync_time.split(':'))
+    
+    # Remove existing job if it exists
+    try:
+        scheduler.remove_job(f"sync_user_{user_id}")
+    except:
+        pass
+    
+    # Schedule new job
+    if user.sync_frequency == 'daily':
+        scheduler.add_job(
+            run_scheduled_sync,
+            'cron',
+            hour=hour,
+            minute=minute,
+            id=f"sync_user_{user_id}",
+            args=[user_id]
+        )
+        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute}")
+    elif user.sync_frequency == 'weekly':
+        scheduler.add_job(
+            run_scheduled_sync,
+            'cron',
+            day_of_week='mon',
+            hour=hour,
+            minute=minute,
+            id=f"sync_user_{user_id}",
+            args=[user_id]
+        )
+        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays")
+
+def run_scheduled_sync(user_id):
+    """Run a scheduled sync for a user."""
+    logger.info(f"Running scheduled sync for user {user_id}")
+    
+    # Get user credentials
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        logger.error(f"No credentials found for user {user_id}")
+        return
+    
+    try:
+        # Decrypt tokens
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+        
+        # Perform sync (only 1 day back for scheduled syncs)
+        result = perform_sync(
+            readwise_token=readwise_token,
+            twos_user_id=creds.twos_user_id,
+            twos_token=twos_token,
+            days_back=1,  # Only sync yesterday's highlights
+            user_id=user_id
+        )
+        
+        logger.info(f"Scheduled sync completed for user {user_id}: {result}")
+        
+    except Exception as e:
+        logger.error(f"Scheduled sync failed for user {user_id}: {e}")
+        
+        # Log the error
+        log = SyncLog(
+            user_id=user_id,
+            status="failed",
+            details=str(e),
+            highlights_synced=0
+        )
+        db.session.add(log)
+        db.session.commit()
+
+# ---- Debug Endpoints ----
+
+@app.route('/debug/users', methods=['GET'])
+def debug_list_users():
+    """List all users for debugging."""
+    logger.info("Debug: Listing all users")
+    
+    try:
+        users = User.query.all()
+        
+        user_list = []
+        for user in users:
+            # Check if user has credentials
+            creds = ApiCredential.query.filter_by(user_id=user.id).first()
+            
+            user_list.append({
+                "id": user.id,
+                "email": user.email,
+                "sync_enabled": user.sync_enabled,
+                "sync_time": user.sync_time,
+                "has_credentials": creds is not None,
+                "twos_user_id": creds.twos_user_id if creds else None
+            })
+        
+        return jsonify({
+            "users": user_list
+        }), 200
+    except Exception as e:
+        logger.error(f"Debug: Error listing users: {e}")
+        import traceback
+        logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Error listing users: {str(e)}"}), 500
+
+@app.route('/debug/trigger-sync/<user_id>', methods=['GET'])
+def debug_trigger_sync(user_id):
+    """Manually trigger a sync for debugging."""
+    logger.info(f"Debug: Manually triggering sync for user {user_id}")
+    
+    try:
+        # Log the user ID
+        logger.info(f"Debug: User ID is {user_id}, type: {type(user_id)}")
+        
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+        
+        if not creds:
+            logger.error(f"Debug: No API credentials found for user {user_id}")
+            return jsonify({"error": "No API credentials found"}), 404
+        
+        # Log credential info
+        logger.info(f"Debug: Found credentials for user {user_id}")
+        logger.info(f"Debug: Twos User ID: {creds.twos_user_id}")
+        logger.info(f"Debug: Readwise token length: {len(creds.readwise_token)}")
+        logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
+        
+        try:
+            # Decrypt tokens
+            readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+            logger.info(f"Debug: Successfully decrypted Readwise token")
+            
+            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            logger.info(f"Debug: Successfully decrypted Twos token")
+            
+            # Perform sync
+            logger.info(f"Debug: Starting sync for user {user_id}")
+            result = perform_sync(
+                readwise_token=readwise_token,
+                twos_user_id=creds.twos_user_id,
+                twos_token=twos_token,
+                days_back=1,  # Only sync yesterday's highlights
+                user_id=user_id
+            )
+            logger.info(f"Debug: Sync completed successfully: {result}")
+            
+            return jsonify({
+                "message": "Debug sync triggered",
+                "result": result
+            }), 200
+        except Exception as e:
+            logger.error(f"Debug: Error during sync: {e}")
+            import traceback
+            logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+            return jsonify({"error": f"Error during sync: {str(e)}"}), 500
+        
+    except Exception as e:
+        logger.error(f"Debug sync failed: {e}")
+        import traceback
+        logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Debug sync failed: {str(e)}"}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    
+    # Initialize scheduler
+    jobstores = {
+        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
+    }
+    scheduler = BackgroundScheduler(jobstores=jobstores)
+    scheduler.start()
+    
+    # Schedule sync jobs for all users
+    with app.app_context():
+        users = User.query.filter_by(sync_enabled=True).all()
+        for user in users:
+            schedule_sync_job(user.id)
+    
+    # Update sync settings endpoint to reschedule jobs
+    old_update_sync_settings = update_sync_settings
+    
+    def new_update_sync_settings(*args, **kwargs):
+        response = old_update_sync_settings(*args, **kwargs)
+        
+        # Extract user_id from the request
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(token)
+                user_id = decoded_token['sub']
+                
+                # Reschedule sync job
+                schedule_sync_job(user_id)
+            except:
+                pass
+        
+        return response
+    
+    # Replace the update_sync_settings function
+    update_sync_settings = new_update_sync_settings
     
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
