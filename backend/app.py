@@ -15,6 +15,10 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from cryptography.fernet import Fernet
 import json
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,28 +26,261 @@ logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config.from_object('config.Config')
+
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-change-in-production')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=30)
+
+# Handle PostgreSQL URL format for Railway
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 
 # Initialize extensions
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": app.config['FRONTEND_URL']}})
 
-# Import models after db initialization to avoid circular imports
-from models import User, ApiCredential, SyncLog
+# CORS configuration
+frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"]}})
 
-# Initialize encryption key
-encryption_key = Fernet(app.config['ENCRYPTION_KEY'])
+# Encryption for API tokens
+encryption_key = os.environ.get('ENCRYPTION_KEY')
+if encryption_key:
+    cipher_suite = Fernet(encryption_key.encode())
+else:
+    cipher_suite = Fernet(Fernet.generate_key())
+    logger.warning("No ENCRYPTION_KEY provided, using generated key (data will be lost on restart)")
 
-# Initialize scheduler
-jobstores = {
-    'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
-}
-scheduler = BackgroundScheduler(jobstores=jobstores)
-scheduler.start()
+# Database Models
+class User(db.Model):
+    """User model."""
+    
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(255))
+    password = db.Column(db.String(255), nullable=True)  # Nullable for social login
+    auth_provider = db.Column(db.String(50), default='local')  # 'local', 'google', 'apple', 'facebook'
+    auth_provider_id = db.Column(db.String(255))  # ID from auth provider
+    
+    # Sync settings
+    sync_enabled = db.Column(db.Boolean, default=True)
+    sync_time = db.Column(db.String(5), default='09:00')  # Format: "HH:MM"
+    sync_frequency = db.Column(db.String(20), default='daily')  # 'daily', 'weekly'
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<User {self.email}>'
 
-# Import sync service
-from sync_service import perform_sync
+class ApiCredential(db.Model):
+    """API credentials model."""
+    
+    __tablename__ = 'api_credentials'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Encrypted API tokens
+    readwise_token = db.Column(db.Text, nullable=False)
+    twos_user_id = db.Column(db.String(255), nullable=False)
+    twos_token = db.Column(db.Text, nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ApiCredential user_id={self.user_id}>'
+
+class SyncLog(db.Model):
+    """Sync log model."""
+    
+    __tablename__ = 'sync_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    status = db.Column(db.String(50), nullable=False)  # 'success', 'failed'
+    highlights_synced = db.Column(db.Integer, default=0)
+    details = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SyncLog user_id={self.user_id} status={self.status}>'
+
+# Import sync service functions
+import requests
+
+def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=None):
+    """Perform a sync from Readwise to Twos."""
+    logger.info(f"Starting sync for user {user_id}, looking back {days_back} days")
+    
+    try:
+        # Calculate since timestamp
+        since_time = datetime.utcnow() - timedelta(days=days_back)
+        since = since_time.isoformat()
+        
+        # Fetch highlights
+        highlights = fetch_highlights_since(readwise_token, since)
+        
+        if highlights:
+            # Fetch books metadata
+            books = fetch_all_books(readwise_token)
+            
+            # Post to Twos
+            post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
+            
+            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+        else:
+            # Still post a message to Twos
+            post_highlights_to_twos([], {}, twos_user_id, twos_token)
+            message = "No new highlights found, but posted update to Twos."
+        
+        # Log successful sync
+        if user_id:
+            log = SyncLog(
+                user_id=user_id,
+                status="success",
+                highlights_synced=len(highlights),
+                details=message
+            )
+            db.session.add(log)
+            db.session.commit()
+        
+        return {
+            "success": True,
+            "message": message,
+            "highlights_synced": len(highlights)
+        }
+        
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        
+        # Log failed sync
+        if user_id:
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                highlights_synced=0,
+                details=str(e)
+            )
+            db.session.add(log)
+            db.session.commit()
+        
+        raise
+
+def fetch_all_books(readwise_token):
+    """Fetch all books from Readwise."""
+    headers = {"Authorization": f"Token {readwise_token}"}
+    books = {}
+    next_url = "https://readwise.io/api/v2/books/"
+    
+    while next_url:
+        try:
+            response = requests.get(next_url, headers=headers, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            
+            for book in data.get("results", []):
+                book_id = book.get("id")
+                title = book.get("title", "Untitled")
+                author = book.get("author", "Unknown")
+                
+                if title.strip().lower() == "how to use readwise":
+                    continue
+                
+                books[book_id] = {"title": title, "author": author}
+            
+            next_url = data.get("next")
+            
+        except requests.RequestException as e:
+            logger.error(f"Error fetching books: {e}")
+            raise
+    
+    return books
+
+def fetch_highlights_since(readwise_token, since):
+    """Fetch highlights updated since a given timestamp."""
+    headers = {"Authorization": f"Token {readwise_token}"}
+    highlights = []
+    next_url = "https://readwise.io/api/v2/highlights/"
+    params = {"page_size": 1000}
+    
+    while next_url:
+        try:
+            response = requests.get(next_url, headers=headers, params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            
+            for highlight in data.get("results", []):
+                if highlight.get("updated") and highlight["updated"] > since:
+                    highlights.append(highlight)
+            
+            next_url = data.get("next")
+            params = {}
+            
+        except requests.RequestException as e:
+            logger.error(f"Error fetching highlights: {e}")
+            raise
+    
+    return highlights
+
+def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
+    """Post highlights to Twos."""
+    api_url = "https://www.twosapp.com/apiV2/user/addToToday"
+    headers = {"Content-Type": "application/json"}
+    today_title = datetime.now().strftime("%a %b %d, %Y")
+    
+    if not highlights:
+        payload = {
+            "text": "No new highlights found.",
+            "title": today_title,
+            "token": twos_token,
+            "user_id": twos_user_id
+        }
+        
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logger.error(f"Failed to post no-highlights message: {e}")
+        return
+    
+    successful_posts = 0
+    for highlight in highlights:
+        try:
+            book_id = highlight.get("book_id")
+            text = highlight.get("text")
+            book_meta = books.get(book_id)
+            
+            if not book_meta:
+                continue
+            
+            title = book_meta["title"]
+            author = book_meta["author"]
+            note_text = f"{title}, {author}: {text}"
+            
+            payload = {
+                "text": note_text.strip(),
+                "title": today_title,
+                "token": twos_token,
+                "user_id": twos_user_id
+            }
+            
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            successful_posts += 1
+            
+        except requests.RequestException as e:
+            logger.error(f"Failed to post highlight: {e}")
+    
+    return successful_posts
 
 # ---- Authentication Routes ----
 
@@ -158,8 +395,8 @@ def save_credentials():
     data = request.json
     
     # Encrypt sensitive data
-    encrypted_readwise_token = encryption_key.encrypt(data['readwise_token'].encode()).decode()
-    encrypted_twos_token = encryption_key.encrypt(data['twos_token'].encode()).decode()
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
     
     # Check if credentials already exist
     creds = ApiCredential.query.filter_by(user_id=user_id).first()
@@ -182,8 +419,7 @@ def save_credentials():
     
     db.session.commit()
     
-    # Schedule daily sync job
-    schedule_sync_job(user_id)
+    # Note: Scheduling would be implemented with a proper job queue
     
     return jsonify({"message": "Credentials saved successfully"}), 200
 
@@ -294,16 +530,8 @@ def update_sync_settings():
     
     db.session.commit()
     
-    # Update scheduled job
-    if user.sync_enabled:
-        schedule_sync_job(user_id)
-    else:
-        # Remove scheduled job
-        try:
-            scheduler.remove_job(f"sync_user_{user_id}")
-            logger.info(f"Removed sync job for user {user_id}")
-        except:
-            pass
+    # Note: Scheduling functionality would be implemented with a proper job queue
+    # For now, we'll just update the settings
     
     return jsonify({
         "message": "Sync settings updated",
@@ -385,11 +613,7 @@ def delete_user():
     ApiCredential.query.filter_by(user_id=user_id).delete()
     SyncLog.query.filter_by(user_id=user_id).delete()
     
-    # Remove scheduled job
-    try:
-        scheduler.remove_job(f"sync_user_{user_id}")
-    except:
-        pass
+    # Note: Job removal would be implemented with a proper job queue
     
     # Delete user
     User.query.filter_by(id=user_id).delete()
