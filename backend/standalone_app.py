@@ -504,6 +504,55 @@ def trigger_sync():
         logger.error(f"Error in sync endpoint: {str(e)}")
         return jsonify({"error": f"Sync request failed: {str(e)}"}), 500
 
+@app.route('/api/sync/history', methods=['GET', 'OPTIONS'])
+def get_sync_history():
+    """Get sync history for a user."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For GET requests, require JWT
+    try:
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        # Get last 10 sync logs
+        logs = SyncLog.query.filter_by(user_id=user_id).order_by(SyncLog.created_at.desc()).limit(10).all()
+        
+        return jsonify({
+            "history": [
+                {
+                    "id": log.id,
+                    "status": log.status,
+                    "highlights_synced": log.highlights_synced,
+                    "details": log.details,
+                    "created_at": log.created_at.isoformat()
+                }
+                for log in logs
+            ]
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting sync history: {str(e)}")
+        return jsonify({"error": f"Failed to get sync history: {str(e)}"}), 500
+
 # ---- User Routes ----
 
 @app.route('/api/user', methods=['GET', 'OPTIONS'])
