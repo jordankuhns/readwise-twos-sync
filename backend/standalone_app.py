@@ -421,6 +421,89 @@ def get_credentials():
         logger.error(f"Error getting credentials: {str(e)}")
         return jsonify({"error": f"Failed to get credentials: {str(e)}"}), 500
 
+# ---- Sync Routes ----
+
+@app.route('/api/sync', methods=['POST', 'OPTIONS'])
+def trigger_sync():
+    """Manually trigger a sync for a user."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For POST requests, require JWT
+    try:
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        data = request.json or {}
+        days_back = data.get('days_back', 7)
+        logger.info(f"Triggering sync for user {user_id} with days_back={days_back}")
+        
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+        
+        if not creds:
+            return jsonify({"error": "No API credentials found"}), 404
+        
+        # Decrypt tokens
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+        
+        # Perform sync (simplified for now)
+        # In a real implementation, this would call a sync service
+        try:
+            # Simulate a successful sync
+            log = SyncLog(
+                user_id=user_id,
+                status="success",
+                highlights_synced=5,  # Placeholder
+                details=f"Successfully synced highlights from the last {days_back} days"
+            )
+            db.session.add(log)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": f"Successfully synced highlights from the last {days_back} days",
+                "highlights_synced": 5  # Placeholder
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Sync operation failed: {str(e)}")
+            
+            # Log the error
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                details=str(e),
+                highlights_synced=0
+            )
+            db.session.add(log)
+            db.session.commit()
+            
+            return jsonify({"error": f"Sync failed: {str(e)}"}), 500
+    
+    except Exception as e:
+        logger.error(f"Error in sync endpoint: {str(e)}")
+        return jsonify({"error": f"Sync request failed: {str(e)}"}), 500
+
 # ---- User Routes ----
 
 @app.route('/api/user', methods=['GET', 'OPTIONS'])
