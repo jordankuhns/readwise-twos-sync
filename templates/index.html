@@ -385,26 +385,33 @@
             const password = document.getElementById('password').value;
             
             try {
+                console.log('Sending login request:', { email, password: '***' });
+                
                 const response = await fetch(`${API_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password }),
+                    credentials: 'include'
                 });
                 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
                 
                 if (response.ok) {
                     // Save token and redirect to dashboard
                     localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
                     window.location.href = '/dashboard';
                 } else {
                     alert(data.error || 'Login failed. Please try again.');
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                alert('Login failed. Please try again later.');
+                alert('Login failed. Please try again later. Check console for details.');
             }
         });
         
