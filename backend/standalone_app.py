@@ -307,6 +307,145 @@ def google_callback():
         logger.error(f"Google callback error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+# ---- API Credential Routes ----
+
+@app.route('/api/credentials', methods=['POST', 'OPTIONS'])
+def save_credentials():
+    """Save API credentials for a user."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For POST requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        data = request.json
+        logger.info(f"Saving credentials for user {user_id}")
+        
+        # Encrypt sensitive data
+        encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+        encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+        
+        # Check if credentials already exist
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+        
+        if creds:
+            # Update existing credentials
+            creds.readwise_token = encrypted_readwise_token
+            creds.twos_user_id = data['twos_user_id']
+            creds.twos_token = encrypted_twos_token
+            creds.updated_at = datetime.utcnow()
+            logger.info(f"Updated credentials for user {user_id}")
+        else:
+            # Create new credentials
+            creds = ApiCredential(
+                user_id=user_id,
+                readwise_token=encrypted_readwise_token,
+                twos_user_id=data['twos_user_id'],
+                twos_token=encrypted_twos_token
+            )
+            db.session.add(creds)
+            logger.info(f"Created new credentials for user {user_id}")
+        
+        db.session.commit()
+        
+        return jsonify({"message": "Credentials saved successfully"}), 200
+    
+    except Exception as e:
+        logger.error(f"Error saving credentials: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": f"Failed to save credentials: {str(e)}"}), 500
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+        
+        if not creds:
+            return jsonify({"message": "No credentials found", "has_credentials": False}), 404
+        
+        # Return credentials with masked tokens for security
+        return jsonify({
+            "readwise_token": "••••••••" + creds.readwise_token[-4:] if len(creds.readwise_token) > 4 else "••••••••",
+            "twos_user_id": creds.twos_user_id,
+            "twos_token": "••••••••" + creds.twos_token[-4:] if len(creds.twos_token) > 4 else "••••••••",
+            "has_credentials": True
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting credentials: {str(e)}")
+        return jsonify({"error": f"Failed to get credentials: {str(e)}"}), 500
+
+# ---- User Routes ----
+
+@app.route('/api/user', methods=['GET', 'OPTIONS'])
+def get_user_profile():
+    """Get user profile."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get latest sync
+        latest_sync = SyncLog.query.filter_by(user_id=user_id).order_by(SyncLog.created_at.desc()).first()
+        
+        # Check if user has credentials
+        has_credentials = ApiCredential.query.filter_by(user_id=user_id).first() is not None
+        
+        return jsonify({
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "sync_enabled": user.sync_enabled,
+            "sync_time": user.sync_time,
+            "sync_frequency": user.sync_frequency,
+            "has_credentials": has_credentials,
+            "last_sync": {
+                "status": latest_sync.status,
+                "time": latest_sync.created_at.isoformat(),
+                "highlights_synced": latest_sync.highlights_synced
+            } if latest_sync else None
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}")
+        return jsonify({"error": f"Failed to get user profile: {str(e)}"}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
