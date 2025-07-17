@@ -5,7 +5,7 @@ import json
 import logging
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -141,12 +141,111 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
 
 @app.route('/')
 def index():
-    """Main page with sync form."""
+    """Landing page with social login."""
     try:
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering template: {e}")
         return f"Template error: {str(e)}", 500
+
+@app.route('/dashboard')
+def dashboard():
+    """User dashboard for managing sync."""
+    try:
+        return render_template('dashboard.html')
+    except Exception as e:
+        logger.error(f"Error rendering template: {e}")
+        return f"Template error: {str(e)}", 500
+
+@app.route('/legacy')
+def legacy():
+    """Legacy one-time sync tool."""
+    # This will be the old sync form for users who don't want to create an account
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Legacy Sync Tool</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            .form-group { margin-bottom: 20px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+            button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #0056b3; }
+            .alert { padding: 15px; margin: 15px 0; border-radius: 4px; }
+            .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
+    </head>
+    <body>
+        <h1>🛠️ Legacy Sync Tool</h1>
+        <p>One-time sync without creating an account. For automated daily syncing, <a href="/">create an account</a>.</p>
+        
+        <div id="alert" class="alert" style="display: none;"></div>
+        
+        <form id="sync-form">
+            <div class="form-group">
+                <label>Readwise API Token</label>
+                <input type="password" id="readwise_token" required>
+            </div>
+            <div class="form-group">
+                <label>Twos User ID</label>
+                <input type="text" id="twos_user_id" required>
+            </div>
+            <div class="form-group">
+                <label>Twos API Token</label>
+                <input type="password" id="twos_token" required>
+            </div>
+            <div class="form-group">
+                <label>Days to Look Back</label>
+                <input type="number" id="sync_days_back" value="7" min="1" max="365">
+            </div>
+            <button type="submit">🚀 Sync Now</button>
+        </form>
+        
+        <script>
+            document.getElementById('sync-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const alert = document.getElementById('alert');
+                
+                alert.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/sync', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert.className = 'alert alert-success';
+                        alert.textContent = result.message;
+                    } else {
+                        alert.className = 'alert alert-error';
+                        alert.textContent = result.error;
+                    }
+                    
+                    alert.style.display = 'block';
+                } catch (error) {
+                    alert.className = 'alert alert-error';
+                    alert.textContent = 'Network error. Please try again.';
+                    alert.style.display = 'block';
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+@app.route('/auth/login/<provider>')
+def auth_redirect(provider):
+    """Redirect to backend for OAuth."""
+    backend_url = os.environ.get('BACKEND_URL', 'https://your-backend-api.railway.app')
+    return redirect(f"{backend_url}/auth/login/{provider}")
 
 
 @app.route('/health')
