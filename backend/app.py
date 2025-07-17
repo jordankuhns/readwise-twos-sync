@@ -460,8 +460,8 @@ def trigger_sync():
     
     try:
         # Decrypt tokens
-        readwise_token = encryption_key.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = encryption_key.decrypt(creds.twos_token.encode()).decode()
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
         
         # Perform sync
         result = perform_sync(
@@ -676,8 +676,8 @@ def run_scheduled_sync(user_id):
     
     try:
         # Decrypt tokens
-        readwise_token = encryption_key.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = encryption_key.decrypt(creds.twos_token.encode()).decode()
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
         
         # Perform sync (only 1 day back for scheduled syncs)
         result = perform_sync(
