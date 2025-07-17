@@ -237,9 +237,7 @@
                     <label for="twos_token">Twos API Token</label>
                     <input type="text" id="twos_token" name="twos_token" required>
                     <div class="help-text">
-                        <div class="help-text">
-                            Get your Twos User ID from <a href="https://www.twosapp.com/640c7f5bb61a830a4b982e80)"
-                                target="_blank">https://www.twosapp.com/640c7f5bb61a830a4b982e80)</a>
+                        Get your Twos API Token from <a href="https://www.twosapp.com/640c7f5bb61a830a4b982e80" target="_blank">your Twos app settings</a>
                     </div>
                 </div>
 
@@ -252,14 +250,61 @@
                 </div>
 
                 <button type="submit" class="sync-button" id="sync-btn">
-                    🚀 Start Sync
+                    🚀 Start Initial Sync
                 </button>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <button type="button" class="sync-button" id="setup-btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                        ⚙️ Setup Daily Auto-Sync
+                    </button>
+                </div>
 
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
                     <p>Syncing your highlights...</p>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Auto-sync setup modal -->
+    <div id="setup-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 20px; color: #2c3e50;">⚙️ Setup Daily Auto-Sync</h2>
+            
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <strong>📋 Instructions:</strong>
+                <ol style="margin: 10px 0 0 20px;">
+                    <li>Copy the workflow file below</li>
+                    <li>Create a new GitHub repository (or use existing)</li>
+                    <li>Create <code>.github/workflows/sync.yml</code> in your repo</li>
+                    <li>Paste the workflow content</li>
+                    <li>Add your API tokens as repository secrets</li>
+                </ol>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">GitHub Workflow File:</label>
+                <textarea id="workflow-content" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px;"></textarea>
+                <button onclick="copyWorkflow()" style="margin-top: 10px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">📋 Copy Workflow</button>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <strong>🔐 Repository Secrets to Add:</strong>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                    <div style="margin-bottom: 10px;"><code>READWISE_TOKEN</code>: <span id="secret-readwise"></span></div>
+                    <div style="margin-bottom: 10px;"><code>TWOS_USER_ID</code>: <span id="secret-twos-id"></span></div>
+                    <div><code>TWOS_TOKEN</code>: <span id="secret-twos-token"></span></div>
+                </div>
+                <div style="font-size: 14px; color: #666; margin-top: 10px;">
+                    Add these in GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
+                </div>
+            </div>
+            
+            <div style="text-align: right;">
+                <button onclick="closeSetupModal()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Close</button>
+                <a id="github-link" href="https://github.com/new" target="_blank" style="padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">Create GitHub Repo</a>
+            </div>
         </div>
     </div>
 
@@ -292,10 +337,9 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    successAlert.textContent = result.message;
+                    successAlert.innerHTML = result.message + '<br><br><strong>✨ Next step:</strong> Click "Setup Daily Auto-Sync" below to never manually sync again!';
                     successAlert.style.display = 'block';
-                    form.reset();
-                    document.getElementById('sync_days_back').value = '7';
+                    // Don't reset form - keep values for auto-sync setup
                 } else {
                     errorAlert.textContent = result.error;
                     errorAlert.style.display = 'block';
@@ -306,8 +350,76 @@
             } finally {
                 // Reset button state
                 submitBtn.disabled = false;
-                submitBtn.textContent = '🚀 Start Sync';
+                submitBtn.textContent = '🚀 Start Initial Sync';
                 loading.style.display = 'none';
+            }
+        });
+
+        document.getElementById('setup-btn').addEventListener('click', function() {
+            const readwiseToken = document.getElementById('readwise_token').value;
+            const twosUserId = document.getElementById('twos_user_id').value;
+            const twosToken = document.getElementById('twos_token').value;
+
+            if (!readwiseToken || !twosUserId || !twosToken) {
+                alert('Please fill in all API credentials first, then try setting up auto-sync.');
+                return;
+            }
+
+            // Generate workflow content
+            const workflowContent = `name: Daily Readwise to Twos Sync
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Daily at 9 AM UTC (adjust as needed)
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Sync Readwise to Twos
+      run: |
+        curl -X POST "https://readwise-twos-sync.vercel.app/sync" \\
+          -H "Content-Type: application/x-www-form-urlencoded" \\
+          -d "readwise_token=\${{ secrets.READWISE_TOKEN }}" \\
+          -d "twos_user_id=\${{ secrets.TWOS_USER_ID }}" \\
+          -d "twos_token=\${{ secrets.TWOS_TOKEN }}" \\
+          -d "sync_days_back=1"`;
+
+            // Populate modal
+            document.getElementById('workflow-content').value = workflowContent;
+            document.getElementById('secret-readwise').textContent = readwiseToken.substring(0, 8) + '...';
+            document.getElementById('secret-twos-id').textContent = twosUserId;
+            document.getElementById('secret-twos-token').textContent = twosToken.substring(0, 8) + '...';
+
+            // Show modal
+            document.getElementById('setup-modal').style.display = 'block';
+        });
+
+        function copyWorkflow() {
+            const textarea = document.getElementById('workflow-content');
+            textarea.select();
+            document.execCommand('copy');
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            button.style.background = '#28a745';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '#28a745';
+            }, 2000);
+        }
+
+        function closeSetupModal() {
+            document.getElementById('setup-modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('setup-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSetupModal();
             }
         });
     </script>
