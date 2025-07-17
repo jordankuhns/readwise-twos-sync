@@ -300,6 +300,9 @@
                             <button class="btn btn-warning" id="pause-sync-btn">
                                 <i class="bi bi-pause-fill"></i> Pause Syncing
                             </button>
+                            <button class="btn btn-outline-primary mt-2" id="change-sync-time-btn">
+                                <i class="bi bi-clock"></i> Change Sync Time
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -455,6 +458,32 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sync Time Selection Modal -->
+    <div class="modal fade" id="sync-time-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Sync Time</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Select the time when you want your daily sync to run:</p>
+                    <div class="mb-3">
+                        <label for="sync-time-input" class="form-label">Sync Time</label>
+                        <input type="time" class="form-control" id="sync-time-input">
+                        <div class="form-text">
+                            This time is in your local time zone.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-sync-time-btn">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -731,6 +760,76 @@
             }
         }
         
+        // Show sync time selection modal
+        function showSyncTimeModal() {
+            // Get current sync time from the display
+            const syncTimeDisplay = document.getElementById('sync-time').textContent;
+            
+            // Convert display time to 24-hour format for the input
+            const date = new Date(`1970-01-01 ${syncTimeDisplay}`);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            
+            // Set the current time in the input
+            document.getElementById('sync-time-input').value = `${hours}:${minutes}`;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('sync-time-modal'));
+            modal.show();
+        }
+        
+        // Update sync time
+        async function updateSyncTime() {
+            const token = checkAuth();
+            if (!token) return;
+            
+            // Get the selected time
+            const timeInput = document.getElementById('sync-time-input').value;
+            if (!timeInput) {
+                alert('Please select a time');
+                return;
+            }
+            
+            // Convert to HH:MM format
+            const [hours, minutes] = timeInput.split(':');
+            const syncTime = `${hours}:${minutes}`;
+            
+            const saveBtn = document.getElementById('save-sync-time-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/sync/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ sync_time: syncTime })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update sync time');
+                }
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('sync-time-modal'));
+                modal.hide();
+                
+                // Refresh user data
+                fetchUserData();
+                
+                alert('Sync time updated successfully!');
+                
+            } catch (error) {
+                console.error('Error updating sync time:', error);
+                alert('Failed to update sync time. Please try again later.');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = 'Save Changes';
+            }
+        }
+        
         // Update credentials
         async function updateCredentials() {
             const token = checkAuth();
@@ -817,6 +916,12 @@
             
             // Pause/resume sync button
             document.getElementById('pause-sync-btn').addEventListener('click', toggleSyncStatus);
+            
+            // Change sync time button
+            document.getElementById('change-sync-time-btn').addEventListener('click', showSyncTimeModal);
+            
+            // Save sync time button
+            document.getElementById('save-sync-time-btn').addEventListener('click', updateSyncTime);
             
             // Update credentials button
             document.getElementById('update-credentials-btn').addEventListener('click', () => {
