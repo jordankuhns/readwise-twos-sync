@@ -318,9 +318,21 @@ def save_credentials():
     
     # For POST requests, require JWT
     try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request()
-        user_id = get_jwt_identity()
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
         logger.error(f"JWT verification failed: {str(e)}")
         return jsonify({"error": "Authentication required"}), 401
@@ -372,9 +384,21 @@ def get_credentials():
     
     # For GET requests, require JWT
     try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request()
-        user_id = get_jwt_identity()
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
         logger.error(f"JWT verification failed: {str(e)}")
         return jsonify({"error": "Authentication required"}), 401
@@ -408,9 +432,21 @@ def get_user_profile():
     
     # For GET requests, require JWT
     try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request()
-        user_id = get_jwt_identity()
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
         logger.error(f"JWT verification failed: {str(e)}")
         return jsonify({"error": "Authentication required"}), 401
