@@ -7,3 +7,5 @@ python-dotenv==1.0.0
 cryptography==41.0.7
 psycopg2-binary==2.9.9
 authlib==1.2.1
+APScheduler==3.10.4
+SQLAlchemy==2.0.23
