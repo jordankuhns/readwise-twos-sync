@@ -542,16 +542,24 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     headers = {"Content-Type": "application/json"}
     today_title = datetime.now().strftime("%a %b %d, %Y")
     
+    # Debug logging
+    logger.info(f"Posting to Twos with user_id: {twos_user_id}")
+    logger.info(f"Token length: {len(twos_token)}")
+    
     if not highlights:
         payload = {
             "text": "No new highlights found.",
-            "title": today_title,
-            "token": twos_token,
-            "user_id": twos_user_id
+            "user_id": twos_user_id,
+            "token": twos_token
         }
+        
+        # Debug logging
+        logger.info(f"Sending payload to Twos: {payload}")
         
         try:
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            logger.info(f"Twos API response status: {response.status_code}")
+            logger.info(f"Twos API response: {response.text}")
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error(f"Failed to post no-highlights message: {e}")
@@ -573,12 +581,17 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
             
             payload = {
                 "text": note_text.strip(),
-                "title": today_title,
-                "token": twos_token,
-                "user_id": twos_user_id
+                "user_id": twos_user_id,
+                "token": twos_token
             }
             
+            # Debug logging
+            logger.info(f"Sending highlight to Twos: {note_text[:50]}...")
+            
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            logger.info(f"Twos API response status: {response.status_code}")
+            if response.status_code != 200:
+                logger.info(f"Twos API error response: {response.text}")
             response.raise_for_status()
             successful_posts += 1
             
