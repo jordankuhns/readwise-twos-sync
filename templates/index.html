@@ -365,26 +365,28 @@
                 return;
             }
 
-            // Generate workflow content
-            const workflowContent = `name: Daily Readwise to Twos Sync
-
-on:
-  schedule:
-    - cron: '0 9 * * *'  # Daily at 9 AM UTC (adjust as needed)
-  workflow_dispatch:  # Allow manual trigger
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Sync Readwise to Twos
-      run: |
-        curl -X POST "https://readwise-twos-sync.vercel.app/sync" \\
-          -H "Content-Type: application/x-www-form-urlencoded" \\
-          -d "readwise_token=\${{ secrets.READWISE_TOKEN }}" \\
-          -d "twos_user_id=\${{ secrets.TWOS_USER_ID }}" \\
-          -d "twos_token=\${{ secrets.TWOS_TOKEN }}" \\
-          -d "sync_days_back=1"`;
+            // Generate workflow content (avoiding Jinja2 template conflicts)
+            const workflowContent = [
+                'name: Daily Readwise to Twos Sync',
+                '',
+                'on:',
+                '  schedule:',
+                '    - cron: \'0 9 * * *\'  # Daily at 9 AM UTC (adjust as needed)',
+                '  workflow_dispatch:  # Allow manual trigger',
+                '',
+                'jobs:',
+                '  sync:',
+                '    runs-on: ubuntu-latest',
+                '    steps:',
+                '    - name: Sync Readwise to Twos',
+                '      run: |',
+                '        curl -X POST "https://readwise-twos-sync.vercel.app/sync" \\',
+                '          -H "Content-Type: application/x-www-form-urlencoded" \\',
+                '          -d "readwise_token=$' + '{{ secrets.READWISE_TOKEN }}" \\',
+                '          -d "twos_user_id=$' + '{{ secrets.TWOS_USER_ID }}" \\',
+                '          -d "twos_token=$' + '{{ secrets.TWOS_TOKEN }}" \\',
+                '          -d "sync_days_back=1"'
+            ].join('\n');
 
             // Populate modal
             document.getElementById('workflow-content').value = workflowContent;
