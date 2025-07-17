@@ -417,15 +417,21 @@
             const password = document.getElementById('reg-password').value;
             
             try {
+                console.log('Sending registration request:', { name, email, password: '***' });
+                
                 const response = await fetch(`${API_URL}/api/auth/register`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ name, email, password }),
+                    credentials: 'include'
                 });
                 
+                console.log('Registration response status:', response.status);
                 const data = await response.json();
+                console.log('Registration response data:', data);
                 
                 if (response.ok) {
                     // Save token and redirect to dashboard
@@ -436,7 +442,7 @@
                 }
             } catch (error) {
                 console.error('Registration error:', error);
-                alert('Registration failed. Please try again later.');
+                alert('Registration failed. Please try again later. Check console for details.');
             }
         });
         
