@@ -676,6 +676,71 @@ def trigger_sync():
         logger.error(f"Error in sync endpoint: {str(e)}")
         return jsonify({"error": f"Sync request failed: {str(e)}"}), 500
 
+@app.route('/api/sync/settings', methods=['POST', 'OPTIONS'])
+def update_sync_settings():
+    """Update sync settings for a user."""
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For POST requests, require JWT
+    try:
+        # Get the Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            logger.error("No Bearer token found in Authorization header")
+            return jsonify({"error": "Authentication required"}), 401
+        
+        # Extract the token
+        token = auth_header.split(' ')[1]
+        
+        # Manually decode the token
+        from flask_jwt_extended import decode_token
+        decoded_token = decode_token(token)
+        user_id = decoded_token['sub']
+        
+        logger.info(f"Successfully authenticated user {user_id}")
+    except Exception as e:
+        logger.error(f"JWT verification failed: {str(e)}")
+        return jsonify({"error": "Authentication required"}), 401
+    
+    try:
+        data = request.json
+        logger.info(f"Updating sync settings for user {user_id}: {data}")
+        
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Update sync settings
+        if 'sync_enabled' in data:
+            user.sync_enabled = data['sync_enabled']
+            logger.info(f"Updated sync_enabled to {user.sync_enabled}")
+        
+        if 'sync_time' in data:
+            user.sync_time = data['sync_time']
+            logger.info(f"Updated sync_time to {user.sync_time}")
+        
+        if 'sync_frequency' in data:
+            user.sync_frequency = data['sync_frequency']
+            logger.info(f"Updated sync_frequency to {user.sync_frequency}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Sync settings updated",
+            "settings": {
+                "sync_enabled": user.sync_enabled,
+                "sync_time": user.sync_time,
+                "sync_frequency": user.sync_frequency
+            }
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error updating sync settings: {str(e)}")
+        return jsonify({"error": f"Failed to update sync settings: {str(e)}"}), 500
+
 @app.route('/api/sync/history', methods=['GET', 'OPTIONS'])
 def get_sync_history():
     """Get sync history for a user."""
