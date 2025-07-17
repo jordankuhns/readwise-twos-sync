@@ -435,6 +435,31 @@
         </div>
     </div>
     
+    <!-- Sync Days Selection Modal -->
+    <div class="modal fade" id="sync-days-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Sync Period</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>How many days of highlights would you like to sync?</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary sync-days-btn" data-days="1">Last 24 hours</button>
+                        <button class="btn btn-outline-primary sync-days-btn" data-days="7">Last 7 days</button>
+                        <button class="btn btn-outline-primary sync-days-btn" data-days="14">Last 14 days</button>
+                        <button class="btn btn-outline-primary sync-days-btn" data-days="21">Last 21 days</button>
+                        <button class="btn btn-outline-primary sync-days-btn" data-days="28">Last 28 days</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -622,8 +647,14 @@
             }
         }
         
-        // Trigger manual sync
-        async function triggerSync() {
+        // Show sync days selection modal
+        function showSyncDaysModal() {
+            const modal = new bootstrap.Modal(document.getElementById('sync-days-modal'));
+            modal.show();
+        }
+        
+        // Trigger manual sync with selected days
+        async function triggerSync(days) {
             const token = checkAuth();
             if (!token) return;
             
@@ -638,7 +669,7 @@
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ days_back: 1 })
+                    body: JSON.stringify({ days_back: days })
                 });
                 
                 if (!response.ok) {
@@ -648,7 +679,7 @@
                 const result = await response.json();
                 
                 // Show success alert
-                alert(`Sync completed successfully! ${result.highlights_synced} highlights synced.`);
+                alert(`Sync completed successfully! ${result.highlights_synced} highlights synced from the last ${days} days.`);
                 
                 // Refresh data
                 fetchUserData();
@@ -761,6 +792,47 @@
         }
         
         // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check authentication
+            checkAuth();
+            
+            // Fetch initial data
+            fetchUserData();
+            fetchCredentials();
+            
+            // Sync now button - show days selection modal
+            document.getElementById('sync-now-btn').addEventListener('click', showSyncDaysModal);
+            
+            // Sync days selection buttons
+            document.querySelectorAll('.sync-days-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const days = parseInt(e.target.getAttribute('data-days'));
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('sync-days-modal'));
+                    modal.hide();
+                    // Trigger sync with selected days
+                    triggerSync(days);
+                });
+            });
+            
+            // Pause/resume sync button
+            document.getElementById('pause-sync-btn').addEventListener('click', toggleSyncStatus);
+            
+            // Update credentials button
+            document.getElementById('update-credentials-btn').addEventListener('click', () => {
+                const modal = new bootstrap.Modal(document.getElementById('update-credentials-modal'));
+                modal.show();
+            });
+            
+            // Save credentials button
+            document.getElementById('save-credentials-btn').addEventListener('click', updateCredentials);
+            
+            // Logout link
+            document.getElementById('logout-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
+            });
+        });ent listeners
         document.addEventListener('DOMContentLoaded', () => {
             // Check authentication
             checkAuth();
