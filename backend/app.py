@@ -44,7 +44,13 @@ jwt = JWTManager(app)
 
 # CORS configuration
 frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
-CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"]}})
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Encryption for API tokens
 encryption_key = os.environ.get('ENCRYPTION_KEY')
@@ -387,11 +393,21 @@ def social_login():
 
 # ---- API Credential Routes ----
 
-@app.route('/api/credentials', methods=['POST'])
-@jwt_required()
+@app.route('/api/credentials', methods=['POST', 'OPTIONS'])
 def save_credentials():
     """Save API credentials for a user."""
-    user_id = get_jwt_identity()
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For POST requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
     data = request.json
     
     # Encrypt sensitive data
@@ -544,11 +560,20 @@ def update_sync_settings():
 
 # ---- User Routes ----
 
-@app.route('/api/user', methods=['GET'])
-@jwt_required()
+@app.route('/api/user', methods=['GET', 'OPTIONS'])
 def get_user():
     """Get user profile."""
-    user_id = get_jwt_identity()
+    # Handle OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
     
     user = User.query.get(user_id)
     
@@ -702,6 +727,26 @@ def run_scheduled_sync(user_id):
         )
         db.session.add(log)
         db.session.commit()
+
+# ---- Global OPTIONS Handler ----
+
+@app.before_request
+def handle_preflight():
+    """Handle CORS preflight requests."""
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
+        return response
+
+# ---- Error Handlers ----
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Handle all exceptions with proper logging."""
+    logger.error(f"Unhandled exception: {str(e)}")
+    return jsonify({"error": "Internal server error"}), 500
 
 # ---- Health Check ----
 
