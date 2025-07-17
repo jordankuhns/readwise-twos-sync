@@ -370,7 +370,7 @@
 
     <script>
         // API URL - Replace with your actual Railway backend URL
-        const API_URL = 'https://readwise-twos-sync-production-a93e2a7c.up.railway.app';
+        const API_URL = 'https://web-production-0b0f42.up.railway.app';
 
         // Toggle between login and register forms
         document.getElementById('show-register').addEventListener('click', function (e) {
@@ -479,8 +479,22 @@
             alert('Facebook login coming soon!');
         });
 
-        // Check if user is already logged in
+        // Check if user is already logged in or handle OAuth redirect
         document.addEventListener('DOMContentLoaded', function () {
+            // Check for token in URL (from OAuth redirect)
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenFromUrl = urlParams.get('token');
+            
+            if (tokenFromUrl) {
+                // Save token from OAuth redirect
+                localStorage.setItem('token', tokenFromUrl);
+                // Clean up URL and redirect to dashboard
+                window.history.replaceState({}, document.title, window.location.pathname);
+                window.location.href = '/dashboard';
+                return;
+            }
+            
+            // Check for existing token
             const token = localStorage.getItem('token');
             if (token) {
                 window.location.href = '/dashboard';
