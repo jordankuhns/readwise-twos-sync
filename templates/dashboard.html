@@ -832,35 +832,6 @@
                 e.preventDefault();
                 logout();
             });
-        });ent listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check authentication
-            checkAuth();
-            
-            // Fetch initial data
-            fetchUserData();
-            fetchCredentials();
-            
-            // Sync now button
-            document.getElementById('sync-now-btn').addEventListener('click', triggerSync);
-            
-            // Pause/resume sync button
-            document.getElementById('pause-sync-btn').addEventListener('click', toggleSyncStatus);
-            
-            // Update credentials button
-            document.getElementById('update-credentials-btn').addEventListener('click', () => {
-                const modal = new bootstrap.Modal(document.getElementById('update-credentials-modal'));
-                modal.show();
-            });
-            
-            // Save credentials button
-            document.getElementById('save-credentials-btn').addEventListener('click', updateCredentials);
-            
-            // Logout link
-            document.getElementById('logout-link').addEventListener('click', (e) => {
-                e.preventDefault();
-                logout();
-            });
         });
     </script>
 </body>
