@@ -353,6 +353,10 @@ def main():
     """Main function to run the scheduler."""
     logger.info("Starting scheduler...")
     
+    # Log environment variables (without sensitive info)
+    logger.info(f"DATABASE_URL: {DATABASE_URL.split('@')[0]}...")
+    logger.info(f"ENCRYPTION_KEY set: {bool(encryption_key)}")
+    
     # Initialize scheduler
     jobstores = {
         'default': SQLAlchemyJobStore(url=DATABASE_URL)
@@ -362,22 +366,44 @@ def main():
     
     # Schedule sync jobs for all users
     session = Session()
-    users_result = session.execute(
-        sa.select([users]).where(users.c.sync_enabled == True)
-    ).fetchall()
-    
-    for user in users_result:
-        schedule_sync_job(user.id, scheduler)
-    
-    session.close()
-    
-    logger.info(f"Scheduled sync jobs for {len(users_result)} users")
+    try:
+        users_result = session.execute(
+            sa.select([users]).where(users.c.sync_enabled == True)
+        ).fetchall()
+        
+        logger.info(f"Found {len(users_result)} users with sync_enabled=True")
+        
+        for user in users_result:
+            logger.info(f"Scheduling sync job for user {user.id} at {user.sync_time}")
+            schedule_sync_job(user.id, scheduler)
+        
+        # Log all scheduled jobs
+        jobs = scheduler.get_jobs()
+        logger.info(f"Total scheduled jobs: {len(jobs)}")
+        for job in jobs:
+            logger.info(f"Job ID: {job.id}, Next run time: {job.next_run_time}")
+        
+    except Exception as e:
+        logger.error(f"Error scheduling sync jobs: {e}")
+    finally:
+        session.close()
     
     # Keep the scheduler running
     try:
+        logger.info("Scheduler is running. Press Ctrl+C to exit.")
         while True:
             time.sleep(60)
+            # Log a heartbeat every minute
+            logger.info("Scheduler heartbeat")
+            
+            # Check for any jobs that should run in the next minute
+            jobs = scheduler.get_jobs()
+            now = datetime.utcnow()
+            for job in jobs:
+                if job.next_run_time and (job.next_run_time - now).total_seconds() < 60:
+                    logger.info(f"Job {job.id} will run soon at {job.next_run_time}")
     except (KeyboardInterrupt, SystemExit):
+        logger.info("Shutting down scheduler...")
         scheduler.shutdown()
 
 if __name__ == "__main__":
