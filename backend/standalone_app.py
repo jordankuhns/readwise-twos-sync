@@ -92,6 +92,19 @@ class SyncLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Routes
+@app.route('/')
+def root():
+    return jsonify({
+        'message': 'Readwise to Twos Sync API',
+        'status': 'running',
+        'endpoints': {
+            'health': '/health',
+            'register': '/api/auth/register',
+            'login': '/api/auth/login',
+            'google_login': '/auth/login/google'
+        }
+    })
+
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
