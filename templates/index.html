@@ -3,330 +3,469 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Readwise to Twos Sync - Automated Daily Syncing</title>
+    <title>Readwise to Twos Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
         }
         
         .container {
-            max-width: 500px;
-            width: 100%;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2c3e50;
             color: white;
-            padding: 40px 30px;
+            padding: 30px;
             text-align: center;
         }
         
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
-            font-weight: 700;
         }
         
         .header p {
             opacity: 0.9;
             font-size: 1.2rem;
-            margin-bottom: 20px;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
-        .features {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
+        .form-container {
+            padding: 40px;
+            background: white;
         }
         
-        .feature {
-            text-align: center;
-            opacity: 0.9;
+        .form-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
         }
         
-        .feature-icon {
-            font-size: 2rem;
+        .form-control {
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-text {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .form-text a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .form-text a:hover {
+            text-decoration: underline;
+        }
+        
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            padding: 12px 20px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: var(--success-gradient);
+            border: none;
+            padding: 12px 20px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+        
+        .security-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .security-note strong {
+            display: block;
             margin-bottom: 5px;
         }
         
-        .feature-text {
-            font-size: 0.9rem;
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: #667eea;
         }
         
-        .content {
-            padding: 40px 30px;
-            text-align: center;
-        }
-        
-        .login-section {
-            margin-bottom: 30px;
-        }
-        
-        .login-section h2 {
-            color: #2d3748;
-            margin-bottom: 20px;
+        .feature-title {
             font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
         
-        .login-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        .feature-text {
+            color: #6c757d;
         }
         
-        .login-btn {
+        .social-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            padding: 15px 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            background: white;
-            color: #2d3748;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 15px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         
-        .login-btn:hover {
-            border-color: #667eea;
+        .social-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            color: white;
         }
         
-        .login-btn img {
-            width: 20px;
-            height: 20px;
+        .btn-google {
+            background-color: #DB4437;
         }
         
-        .google-btn {
-            border-color: #db4437;
+        .btn-apple {
+            background-color: #000000;
         }
         
-        .google-btn:hover {
-            border-color: #c23321;
-            background: #fef5f5;
+        .btn-facebook {
+            background-color: #4267B2;
+        }
+        
+        .social-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
         }
         
         .divider {
-            margin: 30px 0;
-            position: relative;
-            text-align: center;
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: #6c757d;
+        }
+        
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #dee2e6;
         }
         
         .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: #e2e8f0;
+            margin-right: 10px;
         }
         
-        .divider span {
-            background: white;
-            padding: 0 20px;
-            color: #718096;
-            font-size: 14px;
+        .divider::after {
+            margin-left: 10px;
         }
         
-        .legacy-section {
-            padding: 20px;
-            background: #f7fafc;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        
-        .legacy-section h3 {
-            color: #4a5568;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-        }
-        
-        .legacy-btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #e2e8f0;
-            color: #4a5568;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .legacy-btn:hover {
-            background: #cbd5e0;
-            transform: translateY(-1px);
-        }
-        
-        .benefits {
-            margin-top: 30px;
-            text-align: left;
-        }
-        
-        .benefits h3 {
-            color: #2d3748;
-            margin-bottom: 15px;
+        .footer {
             text-align: center;
+            color: white;
+            margin-top: 50px;
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
         
-        .benefit-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            padding: 10px;
-            background: #f7fafc;
-            border-radius: 8px;
-        }
-        
-        .benefit-icon {
-            font-size: 1.2rem;
-            min-width: 24px;
-        }
-        
-        .benefit-text {
-            color: #4a5568;
-            font-size: 14px;
+        .footer a {
+            color: white;
+            text-decoration: underline;
         }
         
         @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-            }
-            
-            .header {
-                padding: 30px 20px;
-            }
-            
             .header h1 {
                 font-size: 2rem;
             }
             
-            .content {
-                padding: 30px 20px;
-            }
-            
-            .features {
-                flex-direction: column;
-                gap: 15px;
+            .form-container {
+                padding: 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📚 → 📝</h1>
-            <p>Readwise to Twos Sync</p>
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">🔄</div>
-                    <div class="feature-text">Auto Sync</div>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🔒</div>
-                    <div class="feature-text">Secure</div>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">⚡</div>
-                    <div class="feature-text">Fast</div>
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card mb-4">
+                    <div class="header">
+                        <h1>📚 Readwise → Twos Sync</h1>
+                        <p>Automatically sync your Readwise highlights to your Twos app daily</p>
+                    </div>
+                    
+                    <div class="form-container">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h2 class="mb-4">Sign In</h2>
+                                
+                                <div class="mb-4">
+                                    <a href="#" class="social-btn btn-google w-100" id="google-login">
+                                        <i class="bi bi-google social-icon"></i> Continue with Google
+                                    </a>
+                                    
+                                    <a href="#" class="social-btn btn-apple w-100" id="apple-login">
+                                        <i class="bi bi-apple social-icon"></i> Continue with Apple
+                                    </a>
+                                    
+                                    <a href="#" class="social-btn btn-facebook w-100" id="facebook-login">
+                                        <i class="bi bi-facebook social-icon"></i> Continue with Facebook
+                                    </a>
+                                </div>
+                                
+                                <div class="divider">or sign in with email</div>
+                                
+                                <form id="login-form">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="password" required>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Sign In</button>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-center">
+                                        <a href="#" id="show-register">Don't have an account? Sign up</a>
+                                    </div>
+                                </form>
+                                
+                                <form id="register-form" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="reg-name" class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="reg-name" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="reg-email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="reg-email" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="reg-password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="reg-password" required>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-success">Sign Up</button>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-center">
+                                        <a href="#" id="show-login">Already have an account? Sign in</a>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="security-note mb-4">
+                                    <strong>🔒 Privacy & Security:</strong>
+                                    Your API tokens are securely encrypted and stored. We never share your data with third parties.
+                                </div>
+                                
+                                <h4 class="mb-3">Why use Readwise to Twos Sync?</h4>
+                                
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="me-3">🔄</div>
+                                        <div>
+                                            <strong>Automatic Daily Sync</strong>
+                                            <div class="text-muted">Set it and forget it - your highlights sync automatically</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="me-3">🔐</div>
+                                        <div>
+                                            <strong>Secure & Private</strong>
+                                            <div class="text-muted">Your API tokens are encrypted and stored securely</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="me-3">⏱️</div>
+                                        <div>
+                                            <strong>Customizable Schedule</strong>
+                                            <div class="text-muted">Choose when and how often to sync your highlights</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">📊</div>
+                                        <div>
+                                            <strong>Sync History & Stats</strong>
+                                            <div class="text-muted">Track your reading insights over time</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="content">
-            <div class="login-section">
-                <h2>Get Started</h2>
-                <p style="color: #718096; margin-bottom: 25px;">
-                    Sign in to set up automated daily syncing of your Readwise highlights to Twos
-                </p>
-                
-                <div class="login-buttons">
-                    <a href="/auth/login/google" class="login-btn google-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        Continue with Google
-                    </a>
-                </div>
-            </div>
-            
-            <div class="benefits">
-                <h3>✨ What you get:</h3>
-                <div class="benefit-item">
-                    <div class="benefit-icon">🔄</div>
-                    <div class="benefit-text">Automatic daily syncing of new highlights</div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon">🔒</div>
-                    <div class="benefit-text">Encrypted storage of your API credentials</div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon">⚙️</div>
-                    <div class="benefit-text">Easy management - pause, resume, or delete anytime</div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon">📊</div>
-                    <div class="benefit-text">Sync history and statistics dashboard</div>
-                </div>
-                <div class="benefit-item">
-                    <div class="benefit-icon">🚀</div>
-                    <div class="benefit-text">Manual sync option for immediate results</div>
-                </div>
-            </div>
-            
-            <div class="divider">
-                <span>or</span>
-            </div>
-            
-            <div class="legacy-section">
-                <h3>🛠️ One-Time Sync</h3>
-                <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
-                    Just need a quick sync without creating an account?
-                </p>
-                <a href="/legacy" class="legacy-btn">Use Legacy Tool</a>
-            </div>
+        <div class="footer">
+            <p>© 2025 Readwise to Twos Sync | <a href="https://github.com/yourusername/readwise-twos-sync" target="_blank">GitHub</a></p>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
     <script>
-        // Check for login status from URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const loginStatus = urlParams.get('login');
+        // API URL
+        const API_URL = 'https://your-backend-api.railway.app';
         
-        if (loginStatus === 'success') {
-            // Redirect to dashboard
-            window.location.href = '/dashboard';
-        } else if (loginStatus === 'error') {
-            // Show error message
-            alert('Login failed. Please try again.');
-        }
+        // Toggle between login and register forms
+        document.getElementById('show-register').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+        });
+        
+        document.getElementById('show-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        });
+        
+        // Handle login form submission
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save token and redirect to dashboard
+                    localStorage.setItem('token', data.access_token);
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(data.error || 'Login failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed. Please try again later.');
+            }
+        });
+        
+        // Handle register form submission
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save token and redirect to dashboard
+                    localStorage.setItem('token', data.access_token);
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(data.error || 'Registration failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                alert('Registration failed. Please try again later.');
+            }
+        });
+        
+        // Handle social login
+        document.getElementById('google-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            // In a real implementation, this would redirect to Google OAuth
+            alert('Google login would be implemented here');
+        });
+        
+        document.getElementById('apple-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            // In a real implementation, this would redirect to Apple OAuth
+            alert('Apple login would be implemented here');
+        });
+        
+        document.getElementById('facebook-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            // In a real implementation, this would redirect to Facebook OAuth
+            alert('Facebook login would be implemented here');
+        });
+        
+        // Check if user is already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                window.location.href = '/dashboard';
+            }
+        });
     </script>
 </body>
 </html>
