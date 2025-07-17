@@ -758,6 +758,96 @@ def health_check():
         "timestamp": datetime.utcnow().isoformat()
     })
 
+# ---- Debug Endpoints ----
+
+@app.route('/debug/users', methods=['GET'])
+def debug_list_users():
+    """List all users for debugging."""
+    logger.info("Debug: Listing all users")
+    
+    try:
+        users = User.query.all()
+        
+        user_list = []
+        for user in users:
+            # Check if user has credentials
+            creds = ApiCredential.query.filter_by(user_id=user.id).first()
+            
+            user_list.append({
+                "id": user.id,
+                "email": user.email,
+                "sync_enabled": user.sync_enabled,
+                "sync_time": user.sync_time,
+                "has_credentials": creds is not None,
+                "twos_user_id": creds.twos_user_id if creds else None
+            })
+        
+        return jsonify({
+            "users": user_list
+        }), 200
+    except Exception as e:
+        logger.error(f"Debug: Error listing users: {e}")
+        import traceback
+        logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Error listing users: {str(e)}"}), 500
+
+@app.route('/debug/trigger-sync/<user_id>', methods=['GET'])
+def debug_trigger_sync(user_id):
+    """Manually trigger a sync for debugging."""
+    logger.info(f"Debug: Manually triggering sync for user {user_id}")
+    
+    try:
+        # Log the user ID
+        logger.info(f"Debug: User ID is {user_id}, type: {type(user_id)}")
+        
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+        
+        if not creds:
+            logger.error(f"Debug: No API credentials found for user {user_id}")
+            return jsonify({"error": "No API credentials found"}), 404
+        
+        # Log credential info
+        logger.info(f"Debug: Found credentials for user {user_id}")
+        logger.info(f"Debug: Twos User ID: {creds.twos_user_id}")
+        logger.info(f"Debug: Readwise token length: {len(creds.readwise_token)}")
+        logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
+        
+        try:
+            # Decrypt tokens
+            readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+            logger.info(f"Debug: Successfully decrypted Readwise token")
+            
+            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            logger.info(f"Debug: Successfully decrypted Twos token")
+            
+            # Perform sync
+            logger.info(f"Debug: Starting sync for user {user_id}")
+            result = perform_sync(
+                readwise_token=readwise_token,
+                twos_user_id=creds.twos_user_id,
+                twos_token=twos_token,
+                days_back=1,  # Only sync yesterday's highlights
+                user_id=user_id
+            )
+            logger.info(f"Debug: Sync completed successfully: {result}")
+            
+            return jsonify({
+                "message": "Debug sync triggered",
+                "result": result
+            }), 200
+        except Exception as e:
+            logger.error(f"Debug: Error during sync: {e}")
+            import traceback
+            logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+            return jsonify({"error": f"Error during sync: {str(e)}"}), 500
+        
+    except Exception as e:
+        logger.error(f"Debug sync failed: {e}")
+        import traceback
+        logger.error(f"Debug: Traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Debug sync failed: {str(e)}"}), 500
+
 if __name__ == '__main__':
     # Create tables if they don't exist
     with app.app_context():
