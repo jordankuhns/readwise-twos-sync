@@ -6,11 +6,12 @@ All dependencies included in one file to avoid import issues
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
 from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
@@ -39,6 +40,18 @@ if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
 # Initialize extensions
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
+oauth = OAuth(app)
+
+# Configure Google OAuth
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID', 'demo-client-id'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', 'demo-client-secret'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 # CORS configuration
 frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
@@ -209,32 +222,89 @@ def login():
 
 @app.route('/auth/login/google')
 def google_login():
-    """Temporary Google login endpoint"""
-    # In a real implementation, this would redirect to Google OAuth
-    # For now, just create a test user and redirect to dashboard
+    """Initiate Google OAuth login"""
     try:
-        # Check if test user exists
-        user = User.query.filter_by(email="test@example.com").first()
+        # Check if we have Google OAuth configured
+        if (os.environ.get('GOOGLE_CLIENT_ID', 'demo-client-id') == 'demo-client-id' or 
+            os.environ.get('GOOGLE_CLIENT_SECRET', 'demo-client-secret') == 'demo-client-secret'):
+            
+            # Demo mode - create a test user
+            logger.info("Google OAuth not configured, using demo mode")
+            user = User.query.filter_by(email="demo@example.com").first()
+            
+            if not user:
+                user = User(
+                    email="demo@example.com",
+                    name="Demo User (Google)",
+                    auth_provider="google",
+                    auth_provider_id="demo123"
+                )
+                db.session.add(user)
+                db.session.commit()
+                logger.info("Created demo Google user")
+            
+            # Generate token
+            access_token = create_access_token(identity=user.id)
+            
+            # Redirect to frontend with token
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+            return redirect(f"{frontend_url}/dashboard?token={access_token}")
         
-        if not user:
-            # Create test user
-            user = User(
-                email="test@example.com",
-                name="Test User",
-                auth_provider="google",
-                auth_provider_id="test123"
-            )
-            db.session.add(user)
-            db.session.commit()
-        
-        # Generate token
-        access_token = create_access_token(identity=user.id)
-        
-        # Redirect to frontend with token
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
-        return redirect(f"{frontend_url}/dashboard?token={access_token}")
-    
+        else:
+            # Real Google OAuth
+            redirect_uri = url_for('google_callback', _external=True)
+            return google.authorize_redirect(redirect_uri)
+            
     except Exception as e:
+        logger.error(f"Google login error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/auth/callback/google')
+def google_callback():
+    """Handle Google OAuth callback"""
+    try:
+        # Get the authorization token
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+        
+        if user_info:
+            # Find or create user
+            user = User.query.filter_by(
+                auth_provider='google',
+                auth_provider_id=user_info['sub']
+            ).first()
+            
+            if not user:
+                # Check if user exists with same email
+                user = User.query.filter_by(email=user_info['email']).first()
+                if user:
+                    # Update existing user with Google info
+                    user.auth_provider = 'google'
+                    user.auth_provider_id = user_info['sub']
+                else:
+                    # Create new user
+                    user = User(
+                        email=user_info['email'],
+                        name=user_info.get('name', ''),
+                        auth_provider='google',
+                        auth_provider_id=user_info['sub']
+                    )
+                    db.session.add(user)
+                
+                db.session.commit()
+            
+            # Generate token
+            access_token = create_access_token(identity=user.id)
+            
+            # Redirect to frontend with token
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+            return redirect(f"{frontend_url}/dashboard?token={access_token}")
+        
+        else:
+            return jsonify({"error": "Failed to get user info from Google"}), 400
+            
+    except Exception as e:
+        logger.error(f"Google callback error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
