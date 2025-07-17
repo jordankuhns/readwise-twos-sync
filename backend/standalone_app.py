@@ -6,7 +6,7 @@ All dependencies included in one file to avoid import issues
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
@@ -98,29 +98,49 @@ def health():
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    data = request.json
-    
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({"error": "Email already registered"}), 400
-    
-    user = User(
-        email=data['email'],
-        name=data.get('name', ''),
-        password=generate_password_hash(data['password']) if 'password' in data else None,
-        auth_provider=data.get('auth_provider', 'local'),
-        auth_provider_id=data.get('auth_provider_id', '')
-    )
-    
-    db.session.add(user)
-    db.session.commit()
-    
-    access_token = create_access_token(identity=user.id)
-    
-    return jsonify({
-        "message": "User registered successfully",
-        "access_token": access_token,
-        "user": {"id": user.id, "email": user.email, "name": user.name}
-    }), 201
+    try:
+        # Log request data for debugging
+        logger.info(f"Registration request: {request.data}")
+        
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.json
+        else:
+            data = request.form.to_dict()
+        
+        # Validate required fields
+        if not data or 'email' not in data or 'password' not in data:
+            logger.error(f"Missing required fields: {data}")
+            return jsonify({"error": "Email and password are required"}), 400
+        
+        # Check if user already exists
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({"error": "Email already registered"}), 400
+        
+        # Create new user
+        user = User(
+            email=data['email'],
+            name=data.get('name', ''),
+            password=generate_password_hash(data['password']),
+            auth_provider='local'
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        # Generate token
+        access_token = create_access_token(identity=user.id)
+        
+        return jsonify({
+            "message": "User registered successfully",
+            "access_token": access_token,
+            "user": {"id": user.id, "email": user.email, "name": user.name}
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": f"Registration failed: {str(e)}"}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -136,6 +156,36 @@ def login():
         "access_token": access_token,
         "user": {"id": user.id, "email": user.email, "name": user.name}
     }), 200
+
+@app.route('/auth/login/google')
+def google_login():
+    """Temporary Google login endpoint"""
+    # In a real implementation, this would redirect to Google OAuth
+    # For now, just create a test user and redirect to dashboard
+    try:
+        # Check if test user exists
+        user = User.query.filter_by(email="test@example.com").first()
+        
+        if not user:
+            # Create test user
+            user = User(
+                email="test@example.com",
+                name="Test User",
+                auth_provider="google",
+                auth_provider_id="test123"
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Generate token
+        access_token = create_access_token(identity=user.id)
+        
+        # Redirect to frontend with token
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+        return redirect(f"{frontend_url}/dashboard?token={access_token}")
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():
