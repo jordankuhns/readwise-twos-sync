@@ -96,11 +96,17 @@ class SyncLog(db.Model):
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
-@app.route('/api/auth/register', methods=['POST'])
+@app.route('/api/auth/register', methods=['POST', 'OPTIONS'])
 def register():
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 200
+        
     try:
         # Log request data for debugging
-        logger.info(f"Registration request: {request.data}")
+        logger.info(f"Registration request received")
+        logger.info(f"Request headers: {dict(request.headers)}")
+        logger.info(f"Request data: {request.data}")
         
         # Handle both JSON and form data
         if request.is_json:
@@ -108,13 +114,17 @@ def register():
         else:
             data = request.form.to_dict()
         
+        logger.info(f"Parsed data: {data}")
+        
         # Validate required fields
         if not data or 'email' not in data or 'password' not in data:
             logger.error(f"Missing required fields: {data}")
             return jsonify({"error": "Email and password are required"}), 400
         
         # Check if user already exists
-        if User.query.filter_by(email=data['email']).first():
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            logger.info(f"User already exists: {data['email']}")
             return jsonify({"error": "Email already registered"}), 400
         
         # Create new user
@@ -125,8 +135,10 @@ def register():
             auth_provider='local'
         )
         
+        logger.info(f"Creating user: {user.email}")
         db.session.add(user)
         db.session.commit()
+        logger.info(f"User created successfully: {user.id}")
         
         # Generate token
         access_token = create_access_token(identity=user.id)
@@ -139,6 +151,9 @@ def register():
         
     except Exception as e:
         logger.error(f"Registration error: {str(e)}")
+        logger.error(f"Exception type: {type(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({"error": f"Registration failed: {str(e)}"}), 500
 

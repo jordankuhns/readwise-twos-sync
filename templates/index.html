@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,7 @@
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --success-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
@@ -19,49 +20,49 @@
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-        
+
         .card {
             border: none;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
-        
+
         .header {
             background: #2c3e50;
             color: white;
             padding: 30px;
             text-align: center;
         }
-        
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
         }
-        
+
         .header p {
             opacity: 0.9;
             font-size: 1.2rem;
             max-width: 600px;
             margin: 0 auto;
         }
-        
+
         .form-container {
             padding: 40px;
             background: white;
         }
-        
+
         .form-label {
             font-weight: 600;
             color: #2c3e50;
             margin-bottom: 8px;
         }
-        
+
         .form-control {
             padding: 12px 16px;
             border: 2px solid #e1e8ed;
@@ -69,27 +70,27 @@
             font-size: 16px;
             transition: border-color 0.3s ease;
         }
-        
+
         .form-control:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .form-text {
             font-size: 14px;
             color: #666;
         }
-        
+
         .form-text a {
             color: #667eea;
             text-decoration: none;
         }
-        
+
         .form-text a:hover {
             text-decoration: underline;
         }
-        
+
         .btn-primary {
             background: var(--primary-gradient);
             border: none;
@@ -97,12 +98,12 @@
             font-weight: 600;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        
+
         .btn-success {
             background: var(--success-gradient);
             border: none;
@@ -110,12 +111,12 @@
             font-weight: 600;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
+
         .btn-success:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         }
-        
+
         .security-note {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -124,28 +125,28 @@
             border-radius: 8px;
             margin-bottom: 25px;
         }
-        
+
         .security-note strong {
             display: block;
             margin-bottom: 5px;
         }
-        
+
         .feature-icon {
             font-size: 2.5rem;
             margin-bottom: 15px;
             color: #667eea;
         }
-        
+
         .feature-title {
             font-size: 1.5rem;
             font-weight: 600;
             margin-bottom: 10px;
         }
-        
+
         .feature-text {
             color: #6c757d;
         }
-        
+
         .social-btn {
             display: flex;
             align-items: center;
@@ -158,51 +159,52 @@
             text-decoration: none;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
+
         .social-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             color: white;
         }
-        
+
         .btn-google {
             background-color: #DB4437;
         }
-        
+
         .btn-apple {
             background-color: #000000;
         }
-        
+
         .btn-facebook {
             background-color: #4267B2;
         }
-        
+
         .social-icon {
             margin-right: 10px;
             font-size: 1.2rem;
         }
-        
+
         .divider {
             display: flex;
             align-items: center;
             margin: 20px 0;
             color: #6c757d;
         }
-        
-        .divider::before, .divider::after {
+
+        .divider::before,
+        .divider::after {
             content: "";
             flex: 1;
             border-bottom: 1px solid #dee2e6;
         }
-        
+
         .divider::before {
             margin-right: 10px;
         }
-        
+
         .divider::after {
             margin-left: 10px;
         }
-        
+
         .footer {
             text-align: center;
             color: white;
@@ -210,23 +212,24 @@
             font-size: 0.9rem;
             opacity: 0.8;
         }
-        
+
         .footer a {
             color: white;
             text-decoration: underline;
         }
-        
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .form-container {
                 padding: 20px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="row justify-content-center">
@@ -236,107 +239,111 @@
                         <h1>📚 Readwise → Twos Sync</h1>
                         <p>Automatically sync your Readwise highlights to your Twos app daily</p>
                     </div>
-                    
+
                     <div class="form-container">
                         <div class="row">
                             <div class="col-md-6">
                                 <h2 class="mb-4">Sign In</h2>
-                                
+
                                 <div class="mb-4">
                                     <a href="#" class="social-btn btn-google w-100" id="google-login">
                                         <i class="bi bi-google social-icon"></i> Continue with Google
                                     </a>
-                                    
+
                                     <a href="#" class="social-btn btn-apple w-100" id="apple-login">
                                         <i class="bi bi-apple social-icon"></i> Continue with Apple
                                     </a>
-                                    
+
                                     <a href="#" class="social-btn btn-facebook w-100" id="facebook-login">
                                         <i class="bi bi-facebook social-icon"></i> Continue with Facebook
                                     </a>
                                 </div>
-                                
+
                                 <div class="divider">or sign in with email</div>
-                                
+
                                 <form id="login-form">
                                     <div class="mb-3">
                                         <label for="email" class="form-label">Email</label>
                                         <input type="email" class="form-control" id="email" required>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label for="password" class="form-label">Password</label>
                                         <input type="password" class="form-control" id="password" required>
                                     </div>
-                                    
+
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-primary">Sign In</button>
                                     </div>
-                                    
+
                                     <div class="mt-3 text-center">
                                         <a href="#" id="show-register">Don't have an account? Sign up</a>
                                     </div>
                                 </form>
-                                
+
                                 <form id="register-form" style="display: none;">
                                     <div class="mb-3">
                                         <label for="reg-name" class="form-label">Name</label>
                                         <input type="text" class="form-control" id="reg-name" required>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label for="reg-email" class="form-label">Email</label>
                                         <input type="email" class="form-control" id="reg-email" required>
                                     </div>
-                                    
+
                                     <div class="mb-3">
                                         <label for="reg-password" class="form-label">Password</label>
                                         <input type="password" class="form-control" id="reg-password" required>
                                     </div>
-                                    
+
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-success">Sign Up</button>
                                     </div>
-                                    
+
                                     <div class="mt-3 text-center">
                                         <a href="#" id="show-login">Already have an account? Sign in</a>
                                     </div>
                                 </form>
                             </div>
-                            
+
                             <div class="col-md-6">
                                 <div class="security-note mb-4">
                                     <strong>🔒 Privacy & Security:</strong>
-                                    Your API tokens are securely encrypted and stored. We never share your data with third parties.
+                                    Your API tokens are securely encrypted and stored. We never share your data with
+                                    third parties.
                                 </div>
-                                
+
                                 <h4 class="mb-3">Why use Readwise to Twos Sync?</h4>
-                                
+
                                 <div class="mb-4">
                                     <div class="d-flex align-items-center mb-3">
                                         <div class="me-3">🔄</div>
                                         <div>
                                             <strong>Automatic Daily Sync</strong>
-                                            <div class="text-muted">Set it and forget it - your highlights sync automatically</div>
+                                            <div class="text-muted">Set it and forget it - your highlights sync
+                                                automatically</div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="d-flex align-items-center mb-3">
                                         <div class="me-3">🔐</div>
                                         <div>
                                             <strong>Secure & Private</strong>
-                                            <div class="text-muted">Your API tokens are encrypted and stored securely</div>
+                                            <div class="text-muted">Your API tokens are encrypted and stored securely
+                                            </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="d-flex align-items-center mb-3">
                                         <div class="me-3">⏱️</div>
                                         <div>
                                             <strong>Customizable Schedule</strong>
-                                            <div class="text-muted">Choose when and how often to sync your highlights</div>
+                                            <div class="text-muted">Choose when and how often to sync your highlights
+                                            </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="d-flex align-items-center">
                                         <div class="me-3">📊</div>
                                         <div>
@@ -351,42 +358,43 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="footer">
-            <p>© 2025 Readwise to Twos Sync | <a href="https://github.com/yourusername/readwise-twos-sync" target="_blank">GitHub</a></p>
+            <p>© 2025 Readwise to Twos Sync | <a href="https://github.com/yourusername/readwise-twos-sync"
+                    target="_blank">GitHub</a></p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
+
     <script>
         // API URL - Replace with your actual Railway backend URL
-        const API_URL = 'https://readwise-twos-sync-production.up.railway.app';
-        
+        const API_URL = 'https://readwise-twos-sync-production-a93e2a7c.up.railway.app';
+
         // Toggle between login and register forms
-        document.getElementById('show-register').addEventListener('click', function(e) {
+        document.getElementById('show-register').addEventListener('click', function (e) {
             e.preventDefault();
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('register-form').style.display = 'block';
         });
-        
-        document.getElementById('show-login').addEventListener('click', function(e) {
+
+        document.getElementById('show-login').addEventListener('click', function (e) {
             e.preventDefault();
             document.getElementById('register-form').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
         });
-        
+
         // Handle login form submission
-        document.getElementById('login-form').addEventListener('submit', async function(e) {
+        document.getElementById('login-form').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            
+
             try {
                 console.log('Sending login request:', { email, password: '***' });
-                
+
                 const response = await fetch(`${API_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
@@ -396,11 +404,11 @@
                     body: JSON.stringify({ email, password }),
                     credentials: 'include'
                 });
-                
+
                 console.log('Login response status:', response.status);
                 const data = await response.json();
                 console.log('Login response data:', data);
-                
+
                 if (response.ok) {
                     // Save token and redirect to dashboard
                     localStorage.setItem('token', data.access_token);
@@ -414,18 +422,18 @@
                 alert('Login failed. Please try again later. Check console for details.');
             }
         });
-        
+
         // Handle register form submission
-        document.getElementById('register-form').addEventListener('submit', async function(e) {
+        document.getElementById('register-form').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
             const password = document.getElementById('reg-password').value;
-            
+
             try {
                 console.log('Sending registration request:', { name, email, password: '***' });
-                
+
                 const response = await fetch(`${API_URL}/api/auth/register`, {
                     method: 'POST',
                     headers: {
@@ -435,11 +443,11 @@
                     body: JSON.stringify({ name, email, password }),
                     credentials: 'include'
                 });
-                
+
                 console.log('Registration response status:', response.status);
                 const data = await response.json();
                 console.log('Registration response data:', data);
-                
+
                 if (response.ok) {
                     // Save token and redirect to dashboard
                     localStorage.setItem('token', data.access_token);
@@ -452,27 +460,27 @@
                 alert('Registration failed. Please try again later. Check console for details.');
             }
         });
-        
+
         // Handle social login
-        document.getElementById('google-login').addEventListener('click', function(e) {
+        document.getElementById('google-login').addEventListener('click', function (e) {
             e.preventDefault();
             window.location.href = `${API_URL}/auth/login/google`;
         });
-        
-        document.getElementById('apple-login').addEventListener('click', function(e) {
+
+        document.getElementById('apple-login').addEventListener('click', function (e) {
             e.preventDefault();
             // Coming soon
             alert('Apple login coming soon!');
         });
-        
-        document.getElementById('facebook-login').addEventListener('click', function(e) {
+
+        document.getElementById('facebook-login').addEventListener('click', function (e) {
             e.preventDefault();
             // Coming soon
             alert('Facebook login coming soon!');
         });
-        
+
         // Check if user is already logged in
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const token = localStorage.getItem('token');
             if (token) {
                 window.location.href = '/dashboard';
@@ -480,4 +488,5 @@
         });
     </script>
 </body>
+
 </html>
