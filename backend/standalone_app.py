@@ -42,7 +42,7 @@ jwt = JWTManager(app)
 
 # CORS configuration
 frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
-CORS(app, resources={r"/api/*": {"origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"]}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Encryption for API tokens
 encryption_key = os.environ.get('ENCRYPTION_KEY')

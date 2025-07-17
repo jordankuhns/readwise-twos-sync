@@ -361,8 +361,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <script>
-        // API URL
-        const API_URL = 'https://your-backend-api.railway.app';
+        // API URL - Replace with your actual Railway backend URL
+        const API_URL = 'https://readwise-twos-sync-production.up.railway.app';
         
         // Toggle between login and register forms
         document.getElementById('show-register').addEventListener('click', function(e) {
@@ -443,20 +443,19 @@
         // Handle social login
         document.getElementById('google-login').addEventListener('click', function(e) {
             e.preventDefault();
-            // In a real implementation, this would redirect to Google OAuth
-            alert('Google login would be implemented here');
+            window.location.href = `${API_URL}/auth/login/google`;
         });
         
         document.getElementById('apple-login').addEventListener('click', function(e) {
             e.preventDefault();
-            // In a real implementation, this would redirect to Apple OAuth
-            alert('Apple login would be implemented here');
+            // Coming soon
+            alert('Apple login coming soon!');
         });
         
         document.getElementById('facebook-login').addEventListener('click', function(e) {
             e.preventDefault();
-            // In a real implementation, this would redirect to Facebook OAuth
-            alert('Facebook login would be implemented here');
+            // Coming soon
+            alert('Facebook login coming soon!');
         });
         
         // Check if user is already logged in
