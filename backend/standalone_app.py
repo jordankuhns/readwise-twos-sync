@@ -167,7 +167,7 @@ def register():
         logger.info(f"User created successfully: {user.id}")
         
         # Generate token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
             "message": "User registered successfully",
@@ -208,7 +208,7 @@ def login():
             logger.info(f"Invalid password for user: {data['email']}")
             return jsonify({"error": "Invalid email or password"}), 401
         
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         
         logger.info(f"Successful login for user: {data['email']}")
         return jsonify({
@@ -244,7 +244,7 @@ def google_login():
                 logger.info("Created demo Google user")
             
             # Generate token
-            access_token = create_access_token(identity=user.id)
+            access_token = create_access_token(identity=str(user.id))
             
             # Redirect to frontend with token
             frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
@@ -294,7 +294,7 @@ def google_callback():
                 db.session.commit()
             
             # Generate token
-            access_token = create_access_token(identity=user.id)
+            access_token = create_access_token(identity=str(user.id))
             
             # Redirect to frontend with token
             frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
