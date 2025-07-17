@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from cryptography.fernet import Fernet
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -318,23 +319,38 @@ def schedule_sync_job(user_id, scheduler):
     # Parse sync time (format: "HH:MM")
     hour, minute = map(int, user_result.sync_time.split(':'))
     
+    # Get the system's local timezone - detect automatically
+    try:
+        # Try to get system timezone
+        import time
+        local_tz_name = time.tzname[time.daylight]
+        if local_tz_name in ['CDT', 'CST']:
+            local_tz = pytz.timezone('America/Chicago')
+        else:
+            # Fallback to system timezone
+            local_tz = pytz.timezone('America/Chicago')  # Default for this deployment
+    except:
+        # Fallback to Chicago timezone
+        local_tz = pytz.timezone('America/Chicago')
+    
     # Remove existing job if it exists
     try:
         scheduler.remove_job(f"sync_user_{user_id}")
     except:
         pass
     
-    # Schedule new job
+    # Schedule new job with timezone
     if user_result.sync_frequency == 'daily':
         scheduler.add_job(
             run_scheduled_sync,
             'cron',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute}")
+        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute} {local_tz}")
     elif user_result.sync_frequency == 'weekly':
         scheduler.add_job(
             run_scheduled_sync,
@@ -342,10 +358,11 @@ def schedule_sync_job(user_id, scheduler):
             day_of_week='mon',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays")
+        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays {local_tz}")
     
     session.close()
 
@@ -398,10 +415,17 @@ def main():
             
             # Check for any jobs that should run in the next minute
             jobs = scheduler.get_jobs()
-            now = datetime.utcnow()
+            now = datetime.now(pytz.UTC)  # Use timezone-aware datetime
             for job in jobs:
-                if job.next_run_time and (job.next_run_time - now).total_seconds() < 60:
-                    logger.info(f"Job {job.id} will run soon at {job.next_run_time}")
+                if job.next_run_time:
+                    # Make sure both datetimes are timezone-aware for comparison
+                    next_run = job.next_run_time
+                    if next_run.tzinfo is None:
+                        next_run = pytz.UTC.localize(next_run)
+                    
+                    time_diff = (next_run - now).total_seconds()
+                    if time_diff < 60:
+                        logger.info(f"Job {job.id} will run soon at {job.next_run_time} (in {time_diff:.0f} seconds)")
     except (KeyboardInterrupt, SystemExit):
         logger.info("Shutting down scheduler...")
         scheduler.shutdown()

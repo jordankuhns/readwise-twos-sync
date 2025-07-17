@@ -16,6 +16,7 @@ from cryptography.fernet import Fernet
 import json
 import logging
 from dotenv import load_dotenv
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -659,23 +660,38 @@ def schedule_sync_job(user_id):
     # Parse sync time (format: "HH:MM")
     hour, minute = map(int, user.sync_time.split(':'))
     
+    # Get the system's local timezone - detect automatically
+    try:
+        # Try to get system timezone
+        import time
+        local_tz_name = time.tzname[time.daylight]
+        if local_tz_name in ['CDT', 'CST']:
+            local_tz = pytz.timezone('America/Chicago')
+        else:
+            # Fallback to system timezone
+            local_tz = pytz.timezone('America/Chicago')  # Default for this deployment
+    except:
+        # Fallback to Chicago timezone
+        local_tz = pytz.timezone('America/Chicago')
+    
     # Remove existing job if it exists
     try:
         scheduler.remove_job(f"sync_user_{user_id}")
     except:
         pass
     
-    # Schedule new job
+    # Schedule new job with timezone
     if user.sync_frequency == 'daily':
         scheduler.add_job(
             run_scheduled_sync,
             'cron',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute}")
+        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute} {local_tz}")
     elif user.sync_frequency == 'weekly':
         scheduler.add_job(
             run_scheduled_sync,
@@ -683,10 +699,11 @@ def schedule_sync_job(user_id):
             day_of_week='mon',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays")
+        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays {local_tz}")
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
@@ -847,6 +864,43 @@ def debug_trigger_sync(user_id):
         import traceback
         logger.error(f"Debug: Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Debug sync failed: {str(e)}"}), 500
+
+@app.route('/debug/scheduler-jobs', methods=['GET'])
+def debug_scheduler_jobs():
+    """Debug endpoint to check scheduled jobs and their next run times."""
+    try:
+        jobs = scheduler.get_jobs()
+        job_info = []
+        
+        for job in jobs:
+            # Get timezone info
+            tz_info = "UTC" if job.next_run_time.tzinfo is None else str(job.next_run_time.tzinfo)
+            
+            job_info.append({
+                "id": job.id,
+                "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
+                "timezone": tz_info,
+                "function": job.func.__name__ if job.func else None,
+                "args": list(job.args) if job.args else []
+            })
+        
+        # Also show current time in different timezones
+        now_utc = datetime.now(pytz.UTC)
+        now_chicago = now_utc.astimezone(pytz.timezone('America/Chicago'))
+        
+        return jsonify({
+            "scheduled_jobs": job_info,
+            "current_time": {
+                "utc": now_utc.isoformat(),
+                "chicago": now_chicago.isoformat(),
+                "system_local": datetime.now().isoformat()
+            },
+            "total_jobs": len(jobs)
+        })
+        
+    except Exception as e:
+        logger.error(f"Debug scheduler jobs failed: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     # Create tables if they don't exist

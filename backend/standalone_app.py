@@ -17,6 +17,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -917,23 +918,38 @@ def schedule_sync_job(user_id):
     # Parse sync time (format: "HH:MM")
     hour, minute = map(int, user.sync_time.split(':'))
     
+    # Get the system's local timezone - detect automatically
+    try:
+        # Try to get system timezone
+        import time
+        local_tz_name = time.tzname[time.daylight]
+        if local_tz_name in ['CDT', 'CST']:
+            local_tz = pytz.timezone('America/Chicago')
+        else:
+            # Fallback to system timezone
+            local_tz = pytz.timezone('America/Chicago')  # Default for this deployment
+    except:
+        # Fallback to Chicago timezone
+        local_tz = pytz.timezone('America/Chicago')
+    
     # Remove existing job if it exists
     try:
         scheduler.remove_job(f"sync_user_{user_id}")
     except:
         pass
     
-    # Schedule new job
+    # Schedule new job with timezone
     if user.sync_frequency == 'daily':
         scheduler.add_job(
             run_scheduled_sync,
             'cron',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute}")
+        logger.info(f"Scheduled daily sync for user {user_id} at {hour}:{minute} {local_tz}")
     elif user.sync_frequency == 'weekly':
         scheduler.add_job(
             run_scheduled_sync,
@@ -941,10 +957,11 @@ def schedule_sync_job(user_id):
             day_of_week='mon',
             hour=hour,
             minute=minute,
+            timezone=local_tz,
             id=f"sync_user_{user_id}",
             args=[user_id]
         )
-        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays")
+        logger.info(f"Scheduled weekly sync for user {user_id} at {hour}:{minute} on Mondays {local_tz}")
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
