@@ -590,8 +590,12 @@ def update_sync_settings():
     
     db.session.commit()
     
-    # Note: Scheduling functionality would be implemented with a proper job queue
-    # For now, we'll just update the settings
+    # Reschedule the sync job with new settings
+    try:
+        schedule_sync_job(user_id)
+        logger.info(f"Rescheduled sync job for user {user_id} with new settings: {user.sync_time}")
+    except Exception as e:
+        logger.error(f"Failed to reschedule sync job for user {user_id}: {e}")
     
     return jsonify({
         "message": "Sync settings updated",
