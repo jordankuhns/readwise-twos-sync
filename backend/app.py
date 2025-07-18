@@ -802,19 +802,19 @@ def run_scheduled_sync(user_id):
             except Exception as decrypt_error:
                 logger.error(f"❌ Failed to decrypt tokens for user {user_id}: {decrypt_error}")
                 raise
-        
-    except Exception as e:
-        logger.error(f"Scheduled sync failed for user {user_id}: {e}")
-        
-        # Log the error
-        log = SyncLog(
-            user_id=user_id,
-            status="failed",
-            details=str(e),
-            highlights_synced=0
-        )
-        db.session.add(log)
-        db.session.commit()
+                
+        except Exception as e:
+            logger.error(f"Scheduled sync failed for user {user_id}: {e}")
+            
+            # Log the error
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                details=str(e),
+                highlights_synced=0
+            )
+            db.session.add(log)
+            db.session.commit()
 
 # ---- Global OPTIONS Handler ----
 
