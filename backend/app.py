@@ -764,30 +764,44 @@ def schedule_sync_job(user_id):
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
-    logger.info(f"Running scheduled sync for user {user_id}")
+    logger.info(f"🔄 SCHEDULED SYNC STARTED for user {user_id}")
     
-    # Get user credentials
-    creds = ApiCredential.query.filter_by(user_id=user_id).first()
-    
-    if not creds:
-        logger.error(f"No credentials found for user {user_id}")
-        return
-    
-    try:
-        # Decrypt tokens
-        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
-        # Perform sync (only 1 day back for scheduled syncs)
-        result = perform_sync(
-            readwise_token=readwise_token,
-            twos_user_id=creds.twos_user_id,
-            twos_token=twos_token,
-            days_back=1,  # Only sync yesterday's highlights
-            user_id=user_id
-        )
-        
-        logger.info(f"Scheduled sync completed for user {user_id}: {result}")
+    # Create a new application context for the scheduled job
+    with app.app_context():
+        try:
+            # Get user credentials
+            creds = ApiCredential.query.filter_by(user_id=user_id).first()
+            
+            if not creds:
+                logger.error(f"❌ No credentials found for user {user_id}")
+                return
+            
+            logger.info(f"✅ Found credentials for user {user_id}")
+            logger.info(f"📝 Twos User ID: {creds.twos_user_id}")
+            logger.info(f"🔑 Readwise token length: {len(creds.readwise_token)}")
+            logger.info(f"🔑 Twos token length: {len(creds.twos_token)}")
+            
+            try:
+                # Decrypt tokens
+                readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+                twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+                logger.info(f"🔓 Successfully decrypted tokens for user {user_id}")
+                
+                # Perform sync (only 1 day back for scheduled syncs)
+                logger.info(f"🚀 Starting perform_sync for user {user_id} (1 day back)")
+                result = perform_sync(
+                    readwise_token=readwise_token,
+                    twos_user_id=creds.twos_user_id,
+                    twos_token=twos_token,
+                    days_back=1,  # Only sync yesterday's highlights
+                    user_id=user_id
+                )
+                
+                logger.info(f"✅ SCHEDULED SYNC COMPLETED for user {user_id}: {result}")
+                
+            except Exception as decrypt_error:
+                logger.error(f"❌ Failed to decrypt tokens for user {user_id}: {decrypt_error}")
+                raise
         
     except Exception as e:
         logger.error(f"Scheduled sync failed for user {user_id}: {e}")
