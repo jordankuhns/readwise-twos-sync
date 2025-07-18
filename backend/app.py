@@ -578,15 +578,25 @@ def update_sync_settings():
     user_id = get_jwt_identity()
     data = request.json
     
+    logger.info(f"Sync settings update request for user {user_id}: {data}")
+    
     user = User.query.get(user_id)
     
     if not user:
         return jsonify({"error": "User not found"}), 404
     
+    # Log current settings before update
+    logger.info(f"Current settings for user {user_id}: sync_enabled={user.sync_enabled}, sync_time={user.sync_time}, sync_frequency={user.sync_frequency}")
+    
     # Update sync settings
+    old_sync_time = user.sync_time
     user.sync_enabled = data.get('sync_enabled', user.sync_enabled)
     user.sync_time = data.get('sync_time', user.sync_time)
     user.sync_frequency = data.get('sync_frequency', user.sync_frequency)
+    
+    # Log what changed
+    if old_sync_time != user.sync_time:
+        logger.info(f"Sync time changed for user {user_id}: {old_sync_time} -> {user.sync_time}")
     
     db.session.commit()
     
