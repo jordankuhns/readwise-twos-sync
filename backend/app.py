@@ -967,7 +967,8 @@ def health_detailed():
         # Check database
         db_status = "ok"
         try:
-            db.session.execute('SELECT 1')
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
         except Exception as e:
             db_status = f"error: {str(e)}"
         
