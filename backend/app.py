@@ -17,6 +17,7 @@ import json
 import logging
 from dotenv import load_dotenv
 import pytz
+import atexit
 
 # Load environment variables
 load_dotenv()
@@ -60,6 +61,48 @@ if encryption_key:
 else:
     cipher_suite = Fernet(Fernet.generate_key())
     logger.warning("No ENCRYPTION_KEY provided, using generated key (data will be lost on restart)")
+
+# Initialize scheduler
+DATABASE_URL = app.config['SQLALCHEMY_DATABASE_URI']
+jobstores = {
+    'default': SQLAlchemyJobStore(url=DATABASE_URL)
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
+
+# Start scheduler when app starts
+def start_scheduler():
+    """Start the background scheduler."""
+    if not scheduler.running:
+        scheduler.start()
+        logger.info("Background scheduler started")
+        
+        # Schedule sync jobs for all enabled users
+        try:
+            users = User.query.filter_by(sync_enabled=True).all()
+            logger.info(f"Found {len(users)} users with sync_enabled=True")
+            
+            for user in users:
+                logger.info(f"Scheduling sync job for user {user.id} at {user.sync_time}")
+                schedule_sync_job(user.id)
+            
+            # Log all scheduled jobs
+            jobs = scheduler.get_jobs()
+            logger.info(f"Total scheduled jobs: {len(jobs)}")
+            for job in jobs:
+                logger.info(f"Job ID: {job.id}, Next run time: {job.next_run_time}")
+                
+        except Exception as e:
+            logger.error(f"Error scheduling sync jobs: {e}")
+
+# Shutdown scheduler when app stops
+def shutdown_scheduler():
+    """Shutdown the background scheduler."""
+    if scheduler.running:
+        scheduler.shutdown()
+        logger.info("Background scheduler stopped")
+
+# Register shutdown handler
+atexit.register(shutdown_scheduler)
 
 # Database Models
 class User(db.Model):
@@ -889,6 +932,7 @@ def debug_scheduler_jobs():
         now_chicago = now_utc.astimezone(pytz.timezone('America/Chicago'))
         
         return jsonify({
+            "scheduler_running": scheduler.running if 'scheduler' in globals() else False,
             "scheduled_jobs": job_info,
             "current_time": {
                 "utc": now_utc.isoformat(),
@@ -902,10 +946,62 @@ def debug_scheduler_jobs():
         logger.error(f"Debug scheduler jobs failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/health-detailed', methods=['GET'])
+def health_detailed():
+    """Detailed health check including scheduler status."""
+    try:
+        # Check database
+        db_status = "ok"
+        try:
+            db.session.execute('SELECT 1')
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        # Check scheduler
+        scheduler_status = "not_initialized"
+        scheduler_jobs = 0
+        if 'scheduler' in globals():
+            if scheduler.running:
+                scheduler_status = "running"
+                scheduler_jobs = len(scheduler.get_jobs())
+            else:
+                scheduler_status = "stopped"
+        
+        # Check users with sync enabled
+        sync_enabled_users = 0
+        try:
+            sync_enabled_users = User.query.filter_by(sync_enabled=True).count()
+        except Exception as e:
+            logger.error(f"Error counting sync enabled users: {e}")
+        
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_status,
+            "scheduler": {
+                "status": scheduler_status,
+                "jobs_count": scheduler_jobs
+            },
+            "users": {
+                "sync_enabled": sync_enabled_users
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 500
+
 if __name__ == '__main__':
     # Create tables if they don't exist
     with app.app_context():
         db.create_all()
+        
+        # Start the scheduler after database is ready
+        start_scheduler()
     
     # Start the app
     port = int(os.environ.get('PORT', 5000))
