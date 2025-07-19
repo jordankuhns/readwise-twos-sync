@@ -516,7 +516,23 @@ def verify_reset_token():
 
 # ---- Admin Routes ----
 
+@app.route('/admin-test')
+def admin_test():
+    """Simple admin test route."""
+    return """
+    <html>
+    <head><title>Admin Test</title></head>
+    <body>
+        <h1>Admin Test Route Working!</h1>
+        <p>If you can see this, the routing is working.</p>
+        <p><a href="/admin">Try Main Admin Route</a></p>
+        <p><a href="/debug/users">Debug Users</a></p>
+    </body>
+    </html>
+    """
+
 @app.route('/admin')
+@app.route('/admin/')
 def admin_dashboard():
     """Admin dashboard page."""
     try:
