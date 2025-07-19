@@ -20,6 +20,11 @@ def after_request(response):
 def options_handler(path):
     return jsonify({}), 200
 
+# Test route to verify server is working
+@app.route('/test')
+def test_route():
+    return "Server is working! Admin route should be available at /admin"
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
