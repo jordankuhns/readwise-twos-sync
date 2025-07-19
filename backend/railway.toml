@@ -2,5 +2,5 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python test_server.py"
+startCommand = "python combined_server.py"
 restartPolicyType = "never"
