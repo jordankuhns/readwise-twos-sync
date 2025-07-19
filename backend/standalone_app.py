@@ -1262,9 +1262,15 @@ def debug_scheduler_jobs():
 @app.route('/test')
 def test_route():
     """Simple test route to verify the app is responding."""
+    import os
     return jsonify({
         "message": "Flask app is working!",
         "timestamp": datetime.utcnow().isoformat(),
+        "environment": {
+            "PORT": os.environ.get('PORT', 'Not set'),
+            "DATABASE_URL": "Set" if os.environ.get('DATABASE_URL') else "Not set",
+            "PYTHONPATH": os.environ.get('PYTHONPATH', 'Not set')
+        },
         "routes_available": [
             "/admin - Admin console",
             "/debug/users - List users", 
@@ -1274,6 +1280,11 @@ def test_route():
             "/debug/scheduler-jobs - Scheduler status"
         ]
     })
+
+@app.route('/debug/simple')
+def debug_simple():
+    """Ultra-simple debug route that doesn't touch the database."""
+    return "SIMPLE DEBUG: Flask app is running and responding to requests!"
 
 if __name__ == '__main__':
     with app.app_context():
