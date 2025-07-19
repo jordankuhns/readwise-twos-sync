@@ -1131,6 +1131,32 @@ def health_check():
         "timestamp": datetime.utcnow().isoformat()
     })
 
+@app.route('/debug/simple')
+def debug_simple():
+    """Ultra-simple debug route that doesn't touch the database."""
+    return "SIMPLE DEBUG: Flask app.py is running and responding to requests!"
+
+@app.route('/debug/deployment-info')
+def debug_deployment_info():
+    """Show deployment information."""
+    import os
+    return jsonify({
+        "message": "Deployment info from app.py",
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment": {
+            "PORT": os.environ.get('PORT', 'Not set'),
+            "DATABASE_URL": "Set" if os.environ.get('DATABASE_URL') else "Not set",
+            "RAILWAY_ENVIRONMENT": os.environ.get('RAILWAY_ENVIRONMENT', 'Not set'),
+            "RAILWAY_SERVICE_NAME": os.environ.get('RAILWAY_SERVICE_NAME', 'Not set')
+        },
+        "admin_routes_available": [
+            "/admin - Admin console",
+            "/debug/reset-password/USER_ID/PASSWORD - Reset password",
+            "/debug/users - List users (requires DB)",
+            "/debug/simple - Simple test (no DB required)"
+        ]
+    })
+
 # ---- Debug Endpoints ----
 
 @app.route('/debug/users', methods=['GET'])
