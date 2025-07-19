@@ -1324,6 +1324,29 @@ def debug_scheduler_jobs():
         logger.error(f"Debug scheduler jobs failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/debug/reset-password/<user_id>/<new_password>')
+def debug_reset_password(user_id, new_password):
+    """Reset a user's password via URL - for emergency access."""
+    try:
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Update password
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Password reset successfully for {user.email}",
+            "user_id": user.id,
+            "email": user.email,
+            "new_password": new_password
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error resetting password: {e}")
+        return jsonify({"error": f"Error resetting password: {str(e)}"}), 500
+
 @app.route('/health-detailed', methods=['GET'])
 def health_detailed():
     """Detailed health check including scheduler status."""
