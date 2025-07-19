@@ -5,8 +5,6 @@ Sync service for Readwise to Twos
 import requests
 import logging
 from datetime import datetime, timedelta
-from app import db
-from models import SyncLog
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,16 +47,7 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
             post_highlights_to_twos([], {}, twos_user_id, twos_token)
             message = "No new highlights found, but posted update to Twos."
         
-        # Log successful sync
-        if user_id:
-            log = SyncLog(
-                user_id=user_id,
-                status="success",
-                highlights_synced=len(highlights),
-                details=message
-            )
-            db.session.add(log)
-            db.session.commit()
+        # Return success info for logging by caller
         
         return {
             "success": True,
@@ -68,18 +57,6 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
         
     except Exception as e:
         logger.error(f"Sync failed: {e}")
-        
-        # Log failed sync
-        if user_id:
-            log = SyncLog(
-                user_id=user_id,
-                status="failed",
-                highlights_synced=0,
-                details=str(e)
-            )
-            db.session.add(log)
-            db.session.commit()
-        
         raise
 
 def fetch_all_books(readwise_token):
