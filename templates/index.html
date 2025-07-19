@@ -277,6 +277,10 @@
                                     </div>
 
                                     <div class="mt-3 text-center">
+                                        <a href="#" id="forgot-password-link">Forgot your password?</a>
+                                    </div>
+                                    
+                                    <div class="mt-2 text-center">
                                         <a href="#" id="show-register">Don't have an account? Sign up</a>
                                     </div>
                                 </form>
@@ -303,6 +307,49 @@
 
                                     <div class="mt-3 text-center">
                                         <a href="#" id="show-login">Already have an account? Sign in</a>
+                                    </div>
+                                </form>
+
+                                <!-- Forgot Password Form -->
+                                <form id="forgot-password-form" style="display: none;">
+                                    <h3 class="mb-3">Reset Password</h3>
+                                    <p class="text-muted mb-4">Enter your email address and we'll send you a link to reset your password.</p>
+                                    
+                                    <div class="mb-3">
+                                        <label for="forgot-email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="forgot-email" required>
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                                    </div>
+
+                                    <div class="mt-3 text-center">
+                                        <a href="#" id="back-to-login">Back to Sign In</a>
+                                    </div>
+                                </form>
+
+                                <!-- Reset Password Form -->
+                                <form id="reset-password-form" style="display: none;">
+                                    <h3 class="mb-3">Set New Password</h3>
+                                    <p class="text-muted mb-4">Enter your new password below.</p>
+                                    
+                                    <div class="mb-3">
+                                        <label for="new-password" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="new-password" required minlength="6">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="confirm-password" class="form-label">Confirm Password</label>
+                                        <input type="password" class="form-control" id="confirm-password" required minlength="6">
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-success">Reset Password</button>
+                                    </div>
+
+                                    <div class="mt-3 text-center">
+                                        <a href="#" id="back-to-login-from-reset">Back to Sign In</a>
                                     </div>
                                 </form>
                             </div>
@@ -461,6 +508,136 @@
             }
         });
 
+        // Handle forgot password link
+        document.getElementById('forgot-password-link').addEventListener('click', function (e) {
+            e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'block';
+            document.getElementById('reset-password-form').style.display = 'none';
+        });
+
+        // Handle back to login links
+        document.getElementById('back-to-login').addEventListener('click', function (e) {
+            e.preventDefault();
+            showLoginForm();
+        });
+
+        document.getElementById('back-to-login-from-reset').addEventListener('click', function (e) {
+            e.preventDefault();
+            showLoginForm();
+        });
+
+        function showLoginForm() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'none';
+            document.getElementById('reset-password-form').style.display = 'none';
+        }
+
+        // Handle forgot password form submission
+        document.getElementById('forgot-password-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('forgot-email').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+
+            try {
+                submitBtn.textContent = 'Sending...';
+                submitBtn.disabled = true;
+
+                const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ email }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('If an account with that email exists, a password reset link has been sent. Please check your email.');
+                    showLoginForm();
+                } else {
+                    alert(data.error || 'Failed to send reset email. Please try again.');
+                }
+            } catch (error) {
+                console.error('Forgot password error:', error);
+                alert('Failed to send reset email. Please try again later.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Handle reset password form submission
+        document.getElementById('reset-password-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match. Please try again.');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters long.');
+                return;
+            }
+
+            try {
+                submitBtn.textContent = 'Resetting...';
+                submitBtn.disabled = true;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const resetToken = urlParams.get('reset_token');
+
+                if (!resetToken) {
+                    alert('Invalid reset link. Please request a new password reset.');
+                    showLoginForm();
+                    return;
+                }
+
+                const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        token: resetToken, 
+                        password: newPassword 
+                    }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Password reset successfully! You can now sign in with your new password.');
+                    // Clear the reset token from URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showLoginForm();
+                } else {
+                    alert(data.error || 'Failed to reset password. Please try again.');
+                }
+            } catch (error) {
+                console.error('Reset password error:', error);
+                alert('Failed to reset password. Please try again later.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
         // Handle social login
         document.getElementById('google-login').addEventListener('click', function (e) {
             e.preventDefault();
@@ -480,10 +657,11 @@
         });
 
         // Check if user is already logged in or handle OAuth redirect
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', async function () {
             // Check for token in URL (from OAuth redirect)
             const urlParams = new URLSearchParams(window.location.search);
             const tokenFromUrl = urlParams.get('token');
+            const resetToken = urlParams.get('reset_token');
 
             if (tokenFromUrl) {
                 // Save token from OAuth redirect
@@ -491,6 +669,51 @@
                 // Clean up URL and redirect to dashboard
                 window.history.replaceState({}, document.title, window.location.pathname);
                 window.location.href = '/dashboard';
+                return;
+            }
+
+            // Check for reset token
+            if (resetToken) {
+                try {
+                    // Verify the reset token
+                    const response = await fetch(`${API_URL}/api/auth/verify-reset-token`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ token: resetToken }),
+                        credentials: 'include'
+                    });
+
+                    const data = await response.json();
+
+                    if (data.valid) {
+                        // Show reset password form
+                        document.getElementById('login-form').style.display = 'none';
+                        document.getElementById('register-form').style.display = 'none';
+                        document.getElementById('forgot-password-form').style.display = 'none';
+                        document.getElementById('reset-password-form').style.display = 'block';
+                        
+                        // Update the form title to show the email
+                        if (data.email) {
+                            const resetForm = document.getElementById('reset-password-form');
+                            const subtitle = resetForm.querySelector('p');
+                            subtitle.textContent = `Enter your new password for ${data.email}`;
+                        }
+                    } else {
+                        alert(data.error || 'Invalid or expired reset link. Please request a new password reset.');
+                        // Clean up URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        showLoginForm();
+                    }
+                } catch (error) {
+                    console.error('Error verifying reset token:', error);
+                    alert('Error verifying reset link. Please request a new password reset.');
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showLoginForm();
+                }
                 return;
             }
 

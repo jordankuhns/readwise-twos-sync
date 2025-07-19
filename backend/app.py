@@ -18,6 +18,10 @@ import logging
 from dotenv import load_dotenv
 import pytz
 import atexit
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Load environment variables
 load_dotenv()
@@ -163,6 +167,22 @@ class SyncLog(db.Model):
     
     def __repr__(self):
         return f'<SyncLog user_id={self.user_id} status={self.status}>'
+
+class PasswordResetToken(db.Model):
+    """Password reset token model."""
+    
+    __tablename__ = 'password_reset_tokens'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token = db.Column(db.String(255), nullable=False, unique=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<PasswordResetToken user_id={self.user_id}>'
 
 # Import sync service functions
 import requests
@@ -332,6 +352,82 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     
     return successful_posts
 
+# ---- Email Functions ----
+
+def send_password_reset_email(email, reset_token):
+    """Send password reset email."""
+    try:
+        # Email configuration from environment variables
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_username = os.environ.get('SMTP_USERNAME')
+        smtp_password = os.environ.get('SMTP_PASSWORD')
+        from_email = os.environ.get('FROM_EMAIL', smtp_username)
+        
+        if not all([smtp_username, smtp_password]):
+            logger.error("SMTP credentials not configured")
+            return False
+        
+        # Create reset URL
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+        reset_url = f"{frontend_url}?reset_token={reset_token}"
+        
+        # Create email content
+        subject = "Reset Your Password - Readwise Twos Sync"
+        
+        html_body = f"""
+        <html>
+        <body>
+            <h2>Password Reset Request</h2>
+            <p>You requested a password reset for your Readwise Twos Sync account.</p>
+            <p>Click the link below to reset your password:</p>
+            <p><a href="{reset_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+            <p>Or copy and paste this URL into your browser:</p>
+            <p>{reset_url}</p>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you didn't request this reset, you can safely ignore this email.</p>
+        </body>
+        </html>
+        """
+        
+        text_body = f"""
+        Password Reset Request
+        
+        You requested a password reset for your Readwise Twos Sync account.
+        
+        Click this link to reset your password: {reset_url}
+        
+        This link will expire in 1 hour.
+        
+        If you didn't request this reset, you can safely ignore this email.
+        """
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = from_email
+        msg['To'] = email
+        
+        # Add both text and HTML parts
+        text_part = MIMEText(text_body, 'plain')
+        html_part = MIMEText(html_body, 'html')
+        
+        msg.attach(text_part)
+        msg.attach(html_part)
+        
+        # Send email
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        
+        logger.info(f"Password reset email sent to {email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send password reset email: {e}")
+        return False
+
 # ---- Authentication Routes ----
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -433,6 +529,113 @@ def social_login():
             "email": user.email,
             "name": user.name
         }
+    }), 200
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    """Request password reset."""
+    data = request.json
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+    
+    # Find user by email
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        # Don't reveal if email exists or not for security
+        return jsonify({"message": "If an account with that email exists, a password reset link has been sent."}), 200
+    
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+    
+    # Save reset token to database
+    # First, invalidate any existing tokens for this user
+    PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({'used': True})
+    
+    # Create new token
+    token_record = PasswordResetToken(
+        user_id=user.id,
+        token=reset_token,
+        expires_at=expires_at
+    )
+    db.session.add(token_record)
+    db.session.commit()
+    
+    # Send email
+    if send_password_reset_email(user.email, reset_token):
+        return jsonify({"message": "If an account with that email exists, a password reset link has been sent."}), 200
+    else:
+        return jsonify({"error": "Failed to send reset email. Please try again later."}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using token."""
+    data = request.json
+    token = data.get('token')
+    new_password = data.get('password')
+    
+    if not token or not new_password:
+        return jsonify({"error": "Token and new password are required"}), 400
+    
+    # Find valid token
+    token_record = PasswordResetToken.query.filter_by(
+        token=token,
+        used=False
+    ).first()
+    
+    if not token_record:
+        return jsonify({"error": "Invalid or expired reset token"}), 400
+    
+    # Check if token is expired
+    if datetime.utcnow() > token_record.expires_at:
+        return jsonify({"error": "Reset token has expired"}), 400
+    
+    # Get user
+    user = User.query.get(token_record.user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Update password
+    user.password_hash = generate_password_hash(new_password)
+    
+    # Mark token as used
+    token_record.used = True
+    
+    db.session.commit()
+    
+    return jsonify({"message": "Password reset successfully"}), 200
+
+@app.route('/api/auth/verify-reset-token', methods=['POST'])
+def verify_reset_token():
+    """Verify if a reset token is valid."""
+    data = request.json
+    token = data.get('token')
+    
+    if not token:
+        return jsonify({"error": "Token is required"}), 400
+    
+    # Find valid token
+    token_record = PasswordResetToken.query.filter_by(
+        token=token,
+        used=False
+    ).first()
+    
+    if not token_record:
+        return jsonify({"valid": False, "error": "Invalid reset token"}), 200
+    
+    # Check if token is expired
+    if datetime.utcnow() > token_record.expires_at:
+        return jsonify({"valid": False, "error": "Reset token has expired"}), 200
+    
+    # Get user email for display
+    user = User.query.get(token_record.user_id)
+    
+    return jsonify({
+        "valid": True,
+        "email": user.email if user else None
     }), 200
 
 # ---- API Credential Routes ----
