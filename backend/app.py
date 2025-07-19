@@ -522,15 +522,58 @@ def admin_dashboard():
     try:
         return render_template('admin.html')
     except Exception as e:
+        logger.error(f"Admin template error: {e}")
         # Fallback if template not found
         return f"""
+        <!DOCTYPE html>
         <html>
-        <head><title>Admin Console</title></head>
+        <head>
+            <title>Admin Console - Readwise Twos Sync</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }}
+                .admin-container {{ max-width: 800px; margin: 2rem auto; padding: 2rem; }}
+                .admin-card {{ background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 2rem; }}
+            </style>
+        </head>
         <body>
-            <h1>Admin Console</h1>
-            <p>Template error: {str(e)}</p>
-            <p>This is a fallback admin page.</p>
-            <a href="/api/admin/users">Test API</a>
+            <div class="admin-container">
+                <div class="admin-card">
+                    <h1 class="text-center mb-4">🔧 Admin Console (Fallback)</h1>
+                    <div class="alert alert-warning">
+                        <strong>Template Error:</strong> {str(e)}
+                    </div>
+                    
+                    <h3>Quick Password Reset</h3>
+                    <p>Use this URL pattern to reset any user's password:</p>
+                    <code>/debug/reset-password/USER_ID/NEW_PASSWORD</code>
+                    
+                    <h3>Available Admin APIs</h3>
+                    <ul class="list-group mt-3">
+                        <li class="list-group-item">
+                            <a href="/api/admin/users" class="btn btn-primary btn-sm">View Users API</a>
+                            <span class="ms-2">GET /api/admin/users</span>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="/debug/users" class="btn btn-info btn-sm">Debug Users</a>
+                            <span class="ms-2">GET /debug/users</span>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="/health-detailed" class="btn btn-success btn-sm">System Health</a>
+                            <span class="ms-2">GET /health-detailed</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-4">
+                        <h4>Password Reset Instructions:</h4>
+                        <ol>
+                            <li>Go to <a href="/debug/users">/debug/users</a> to find the user ID</li>
+                            <li>Use URL: <code>/debug/reset-password/[USER_ID]/[NEW_PASSWORD]</code></li>
+                            <li>Example: <code>/debug/reset-password/1/newpassword123</code></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
         </body>
         </html>
         """
