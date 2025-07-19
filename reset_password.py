@@ -15,7 +15,7 @@ load_dotenv()
 
 def reset_password():
     # Get database URL
-    database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get('postgresql://postgres:mQDVhXdxkhrbiCbiVKOYMnbGIdGvECDc@postgres.railway.internal:5432/railway')
     if not database_url:
         print("ERROR: DATABASE_URL not found in environment variables")
         return

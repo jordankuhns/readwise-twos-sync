@@ -5,7 +5,7 @@ Handles authentication, database, and scheduled syncs
 
 import os
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
@@ -636,6 +636,139 @@ def verify_reset_token():
     return jsonify({
         "valid": True,
         "email": user.email if user else None
+    }), 200
+
+# ---- Admin Routes ----
+
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard page."""
+    return render_template('admin.html')
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_get_users():
+    """Get all users for admin."""
+    # Simple admin authentication - in production, use proper auth
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or 'admin-access' not in auth_header:
+        return jsonify({"error": "Admin access required"}), 401
+    
+    users = User.query.all()
+    users_data = []
+    
+    for user in users:
+        users_data.append({
+            'id': user.id,
+            'email': user.email,
+            'name': user.name,
+            'auth_provider': user.auth_provider,
+            'sync_enabled': user.sync_enabled,
+            'created_at': user.created_at.isoformat() if user.created_at else None
+        })
+    
+    return jsonify(users_data), 200
+
+@app.route('/api/admin/users', methods=['POST'])
+def admin_create_user():
+    """Create a new user."""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or 'admin-access' not in auth_header:
+        return jsonify({"error": "Admin access required"}), 401
+    
+    data = request.json
+    email = data.get('email')
+    name = data.get('name')
+    password = data.get('password')
+    
+    if not email or not name or not password:
+        return jsonify({"error": "Email, name, and password are required"}), 400
+    
+    # Check if user already exists
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        return jsonify({"error": "User with this email already exists"}), 400
+    
+    # Create new user
+    user = User(
+        email=email,
+        name=name,
+        password_hash=generate_password_hash(password),
+        auth_provider='local'
+    )
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify({
+        "message": "User created successfully",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name
+        }
+    }), 201
+
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+def admin_reset_password():
+    """Reset a user's password."""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or 'admin-access' not in auth_header:
+        return jsonify({"error": "Admin access required"}), 401
+    
+    user_id = request.view_args['user_id']
+    data = request.json
+    new_password = data.get('password')
+    
+    if not new_password:
+        return jsonify({"error": "New password is required"}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Update password
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    
+    return jsonify({"message": f"Password reset successfully for {user.email}"}), 200
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+def admin_delete_user():
+    """Delete a user."""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or 'admin-access' not in auth_header:
+        return jsonify({"error": "Admin access required"}), 401
+    
+    user_id = request.view_args['user_id']
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Delete user (cascade will handle related records)
+    db.session.delete(user)
+    db.session.commit()
+    
+    return jsonify({"message": f"User {user.email} deleted successfully"}), 200
+
+@app.route('/api/admin/stats', methods=['GET'])
+def admin_get_stats():
+    """Get admin statistics."""
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or 'admin-access' not in auth_header:
+        return jsonify({"error": "Admin access required"}), 401
+    
+    total_users = User.query.count()
+    active_users = User.query.filter_by(sync_enabled=True).count()
+    
+    # For recent logins, we'll just use total users for now
+    # In a real app, you'd track login timestamps
+    recent_logins = total_users
+    
+    return jsonify({
+        "total_users": total_users,
+        "active_users": active_users,
+        "recent_logins": recent_logins
     }), 200
 
 # ---- API Credential Routes ----

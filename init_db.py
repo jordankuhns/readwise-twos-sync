@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Override DATABASE_URL for local use
+os.environ['DATABASE_URL'] = 'sqlite:///app.db'
+
 # Add backend to path
 sys.path.append('backend')
 
