@@ -113,7 +113,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     name = db.Column(db.String(255))
-    password = db.Column(db.String(255), nullable=True)  # Nullable for social login
+    password_hash = db.Column(db.String(255), nullable=True)  # Nullable for social login
     auth_provider = db.Column(db.String(50), default='local')  # 'local', 'google', 'apple', 'facebook'
     auth_provider_id = db.Column(db.String(255))  # ID from auth provider
     
@@ -347,7 +347,7 @@ def register():
     user = User(
         email=data['email'],
         name=data.get('name', ''),
-        password=generate_password_hash(data['password']) if 'password' in data else None,
+        password_hash=generate_password_hash(data['password']) if 'password' in data else None,
         auth_provider=data.get('auth_provider', 'local'),
         auth_provider_id=data.get('auth_provider_id', '')
     )
@@ -377,7 +377,7 @@ def login():
     user = User.query.filter_by(email=data['email']).first()
     
     # Check if user exists and password is correct
-    if not user or (user.password and not check_password_hash(user.password, data['password'])):
+    if not user or (user.password_hash and not check_password_hash(user.password_hash, data['password'])):
         return jsonify({"error": "Invalid email or password"}), 401
     
     # Create access token

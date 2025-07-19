@@ -13,7 +13,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     name = db.Column(db.String(255))
-    password = db.Column(db.String(255), nullable=True)  # Nullable for social login
+    password_hash = db.Column(db.String(255), nullable=True)  # Nullable for social login
     auth_provider = db.Column(db.String(50), default='local')  # 'local', 'google', 'apple', 'facebook'
     auth_provider_id = db.Column(db.String(255))  # ID from auth provider
     
