@@ -1093,6 +1093,82 @@ def debug_trigger_sync(user_id):
         logger.error(f"Debug: Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Debug sync failed: {str(e)}"}), 500
 
+# ---- Admin Routes ----
+
+@app.route('/admin')
+@app.route('/admin/')
+def admin_dashboard():
+    """Admin dashboard page."""
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin Console - Readwise Twos Sync</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+            .admin-container { max-width: 800px; margin: 2rem auto; padding: 2rem; }
+            .admin-card { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 2rem; }
+        </style>
+    </head>
+    <body>
+        <div class="admin-container">
+            <div class="admin-card">
+                <h1 class="text-center mb-4">🔧 Admin Console</h1>
+                
+                <h3>Quick Password Reset</h3>
+                <p>Use this URL pattern to reset any user's password:</p>
+                <code>/debug/reset-password/USER_ID/NEW_PASSWORD</code>
+                
+                <h3>Available Admin Tools</h3>
+                <ul class="list-group mt-3">
+                    <li class="list-group-item">
+                        <a href="/debug/users" class="btn btn-info btn-sm">View All Users</a>
+                        <span class="ms-2">See user list with IDs</span>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="/health" class="btn btn-success btn-sm">System Health</a>
+                        <span class="ms-2">Check system status</span>
+                    </li>
+                </ul>
+                
+                <div class="mt-4">
+                    <h4>Password Reset Instructions:</h4>
+                    <ol>
+                        <li>Go to <a href="/debug/users">/debug/users</a> to find the user ID</li>
+                        <li>Use URL: <code>/debug/reset-password/[USER_ID]/[NEW_PASSWORD]</code></li>
+                        <li>Example: <code>/debug/reset-password/1/newpassword123</code></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route('/debug/reset-password/<user_id>/<new_password>')
+def debug_reset_password(user_id, new_password):
+    """Reset a user's password via URL - for emergency access."""
+    try:
+        user = User.query.get(int(user_id))
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Update password
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Password reset successfully for {user.email}",
+            "user_id": user.id,
+            "email": user.email,
+            "new_password": new_password
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error resetting password: {e}")
+        return jsonify({"error": f"Error resetting password: {str(e)}"}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
