@@ -1169,6 +1169,112 @@ def debug_reset_password(user_id, new_password):
         logger.error(f"Error resetting password: {e}")
         return jsonify({"error": f"Error resetting password: {str(e)}"}), 500
 
+@app.route('/health-detailed', methods=['GET'])
+def health_detailed():
+    """Detailed health check including scheduler status."""
+    try:
+        # Check database
+        db_status = "ok"
+        try:
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        # Check scheduler
+        scheduler_status = "not_initialized"
+        scheduler_jobs = 0
+        if 'scheduler' in globals():
+            if scheduler.running:
+                scheduler_status = "running"
+                scheduler_jobs = len(scheduler.get_jobs())
+            else:
+                scheduler_status = "stopped"
+        
+        # Check users with sync enabled
+        sync_enabled_users = 0
+        try:
+            sync_enabled_users = User.query.filter_by(sync_enabled=True).count()
+        except Exception as e:
+            logger.error(f"Error counting sync enabled users: {e}")
+        
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_status,
+            "scheduler": {
+                "status": scheduler_status,
+                "jobs_count": scheduler_jobs
+            },
+            "users": {
+                "sync_enabled": sync_enabled_users
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/debug/scheduler-jobs', methods=['GET'])
+def debug_scheduler_jobs():
+    """Debug endpoint to check scheduled jobs and their next run times."""
+    try:
+        jobs = []
+        if 'scheduler' in globals() and scheduler:
+            jobs = scheduler.get_jobs()
+        
+        job_info = []
+        for job in jobs:
+            # Get timezone info
+            tz_info = "UTC" if job.next_run_time.tzinfo is None else str(job.next_run_time.tzinfo)
+            
+            job_info.append({
+                "id": job.id,
+                "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
+                "timezone": tz_info,
+                "function": job.func.__name__ if job.func else None,
+                "args": list(job.args) if job.args else []
+            })
+        
+        # Also show current time in different timezones
+        now_utc = datetime.now(pytz.UTC)
+        now_chicago = now_utc.astimezone(pytz.timezone('America/Chicago'))
+        
+        return jsonify({
+            "scheduler_running": scheduler.running if 'scheduler' in globals() and scheduler else False,
+            "scheduled_jobs": job_info,
+            "current_time": {
+                "utc": now_utc.isoformat(),
+                "chicago": now_chicago.isoformat(),
+                "system_local": datetime.now().isoformat()
+            },
+            "total_jobs": len(jobs)
+        })
+        
+    except Exception as e:
+        logger.error(f"Debug scheduler jobs failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test')
+def test_route():
+    """Simple test route to verify the app is responding."""
+    return jsonify({
+        "message": "Flask app is working!",
+        "timestamp": datetime.utcnow().isoformat(),
+        "routes_available": [
+            "/admin - Admin console",
+            "/debug/users - List users", 
+            "/debug/reset-password/USER_ID/PASSWORD - Reset password",
+            "/health - Basic health check",
+            "/health-detailed - Detailed health check",
+            "/debug/scheduler-jobs - Scheduler status"
+        ]
+    })
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
