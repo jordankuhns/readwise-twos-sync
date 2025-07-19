@@ -643,7 +643,21 @@ def verify_reset_token():
 @app.route('/admin')
 def admin_dashboard():
     """Admin dashboard page."""
-    return render_template('admin.html')
+    try:
+        return render_template('admin.html')
+    except Exception as e:
+        # Fallback if template not found
+        return f"""
+        <html>
+        <head><title>Admin Console</title></head>
+        <body>
+            <h1>Admin Console</h1>
+            <p>Template error: {str(e)}</p>
+            <p>This is a fallback admin page.</p>
+            <a href="/api/admin/users">Test API</a>
+        </body>
+        </html>
+        """
 
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
