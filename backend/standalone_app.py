@@ -75,7 +75,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     name = db.Column(db.String(255))
-    password = db.Column(db.String(255), nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     auth_provider = db.Column(db.String(50), default='local')
     auth_provider_id = db.Column(db.String(255))
     
@@ -212,7 +212,7 @@ def register():
         user = User(
             email=data['email'],
             name=data.get('name', ''),
-            password=generate_password_hash(data['password']),
+            password_hash=generate_password_hash(data['password']),
             auth_provider='local'
         )
         
@@ -259,7 +259,7 @@ def login():
             logger.info(f"User not found: {data['email']}")
             return jsonify({"error": "Invalid email or password"}), 401
         
-        if user.password and not check_password_hash(user.password, data['password']):
+        if user.password_hash and not check_password_hash(user.password_hash, data['password']):
             logger.info(f"Invalid password for user: {data['email']}")
             return jsonify({"error": "Invalid email or password"}), 401
         
