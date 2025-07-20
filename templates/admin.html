@@ -243,8 +243,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Dynamically determine API URL based on current location
-        const API_URL = window.location.origin;
+        // API URL - use Railway backend for API calls
+        const API_URL = window.location.hostname.includes('vercel.app') 
+            ? 'https://web-production-0b0f42.up.railway.app'
+            : window.location.origin;
         let currentResetUserId = null;
 
         // Load users on page load
