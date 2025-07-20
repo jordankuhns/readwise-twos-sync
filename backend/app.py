@@ -104,14 +104,24 @@ def start_scheduler():
         scheduler.start()
         logger.info("Background scheduler started")
         
-        # Schedule sync jobs for all enabled users
+        # Schedule sync jobs for all enabled users (with error handling for schema issues)
         try:
-            users = User.query.filter_by(sync_enabled=True).all()
-            logger.info(f"Found {len(users)} users with sync_enabled=True")
+            # Try to get users with sync_enabled=True, fallback to all users if column doesn't exist
+            try:
+                users = User.query.filter_by(sync_enabled=True).all()
+            except Exception as schema_error:
+                logger.warning(f"sync_enabled column not available yet: {schema_error}")
+                users = User.query.all()  # Fallback to all users
+            
+            logger.info(f"Found {len(users)} users for sync scheduling")
             
             for user in users:
-                logger.info(f"Scheduling sync job for user {user.id} at {user.sync_time}")
-                schedule_sync_job(user.id)
+                try:
+                    sync_time = getattr(user, 'sync_time', '09:00')
+                    logger.info(f"Scheduling sync job for user {user.id} at {sync_time}")
+                    schedule_sync_job(user.id)
+                except Exception as user_error:
+                    logger.warning(f"Could not schedule sync for user {user.id}: {user_error}")
             
             # Log all scheduled jobs
             jobs = scheduler.get_jobs()
@@ -732,7 +742,11 @@ def admin_get_stats():
         return jsonify({"error": "Admin access required"}), 401
     
     total_users = User.query.count()
-    active_users = User.query.filter_by(sync_enabled=True).count()
+    try:
+        active_users = User.query.filter_by(sync_enabled=True).count()
+    except Exception:
+        # Fallback if sync_enabled column doesn't exist yet
+        active_users = total_users
     
     # For recent logins, we'll just use total users for now
     # In a real app, you'd track login timestamps
@@ -1382,6 +1396,11 @@ def health_detailed():
             sync_enabled_users = User.query.filter_by(sync_enabled=True).count()
         except Exception as e:
             logger.error(f"Error counting sync enabled users: {e}")
+            # Fallback to total users if sync_enabled column doesn't exist
+            try:
+                sync_enabled_users = User.query.count()
+            except Exception:
+                sync_enabled_users = 0
         
         return jsonify({
             "status": "healthy",

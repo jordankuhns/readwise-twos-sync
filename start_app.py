@@ -31,25 +31,43 @@ def setup_and_start():
             inspector = inspect(db.engine)
             if inspector.has_table('users'):
                 columns = [col['name'] for col in inspector.get_columns('users')]
-                if 'password_hash' not in columns:
-                    print("🔄 Migrating existing database schema...")
-                    # Add missing columns
-                    try:
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(50) DEFAULT 'local'"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN auth_provider_id VARCHAR(255)"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN sync_enabled BOOLEAN DEFAULT true"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN sync_time VARCHAR(5) DEFAULT '09:00'"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN sync_frequency VARCHAR(20) DEFAULT 'daily'"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                        db.session.execute(text("ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                        db.session.commit()
-                        print("✅ Database migration complete")
-                    except Exception as e:
-                        print(f"⚠️  Migration warning: {e}")
-                        db.session.rollback()
+                print(f"🔍 Current database columns: {columns}")
+                
+                # List of columns to add with their SQL
+                migrations = [
+                    ("password_hash", "ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"),
+                    ("auth_provider", "ALTER TABLE users ADD COLUMN auth_provider VARCHAR(50) DEFAULT 'local'"),
+                    ("auth_provider_id", "ALTER TABLE users ADD COLUMN auth_provider_id VARCHAR(255)"),
+                    ("sync_enabled", "ALTER TABLE users ADD COLUMN sync_enabled BOOLEAN DEFAULT true"),
+                    ("sync_time", "ALTER TABLE users ADD COLUMN sync_time VARCHAR(5) DEFAULT '09:00'"),
+                    ("sync_frequency", "ALTER TABLE users ADD COLUMN sync_frequency VARCHAR(20) DEFAULT 'daily'"),
+                    ("created_at", "ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                    ("updated_at", "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                ]
+                
+                migrations_applied = 0
+                for column_name, sql in migrations:
+                    if column_name not in columns:
+                        try:
+                            print(f"🔄 Adding column: {column_name}")
+                            db.session.execute(text(sql))
+                            db.session.commit()
+                            migrations_applied += 1
+                            print(f"✅ Added column: {column_name}")
+                        except Exception as e:
+                            print(f"⚠️  Failed to add {column_name}: {e}")
+                            db.session.rollback()
+                
+                if migrations_applied > 0:
+                    print(f"✅ Applied {migrations_applied} database migrations")
+                else:
+                    print("✅ No database migrations needed")
+            else:
+                print("📋 Users table doesn't exist, will be created by db.create_all()")
         except Exception as e:
-            print(f"⚠️  Schema check warning: {e}")
+            print(f"⚠️  Schema check error: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Create all tables (safe to run multiple times)
         db.create_all()
