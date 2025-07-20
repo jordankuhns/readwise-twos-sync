@@ -28,6 +28,11 @@ def settings():
     # This would be implemented in a real app
     return redirect('/dashboard')
 
+@app.route('/admin')
+def admin():
+    """Admin console page."""
+    return render_template('admin.html')
+
 @app.route('/api/proxy/<path:endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api_proxy(endpoint):
     """Proxy API requests to backend."""
