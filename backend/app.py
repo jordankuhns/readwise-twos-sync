@@ -69,16 +69,20 @@ jwt = JWTManager(app)
 
 # CORS configuration
 frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
+railway_url = "https://web-production-0b0f42.up.railway.app"
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
+        "origins": [frontend_url, railway_url, "http://localhost:3000", "http://localhost:5000", "http://127.0.0.1:5000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     },
     r"/debug/*": {
-        "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
+        "origins": [frontend_url, railway_url, "http://localhost:3000", "http://localhost:5000", "http://127.0.0.1:5000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
 })
 
