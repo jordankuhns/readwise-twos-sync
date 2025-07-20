@@ -44,6 +44,25 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=30)
 if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgres://'):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace('postgres://', 'postgresql://', 1)
 
+# For local development, use SQLite if Railway database is not accessible
+if 'railway.internal' in app.config['SQLALCHEMY_DATABASE_URI']:
+    try:
+        # Test if we can connect to Railway database
+        import psycopg2
+        from urllib.parse import urlparse
+        url = urlparse(app.config['SQLALCHEMY_DATABASE_URI'])
+        psycopg2.connect(
+            host=url.hostname,
+            port=url.port,
+            user=url.username,
+            password=url.password,
+            database=url.path[1:]
+        ).close()
+        logger.info("Successfully connected to Railway PostgreSQL database")
+    except Exception as e:
+        logger.warning(f"Cannot connect to Railway database ({e}), falling back to SQLite for local development")
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+
 # Initialize extensions
 db = SQLAlchemy(app)
 jwt = JWTManager(app)

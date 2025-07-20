@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "cd backend && pip install -r requirements.txt"
 
 [deploy]
-startCommand = "cd backend && python combined_server.py"
+startCommand = "python start_app.py"
 restartPolicyType = "never"
 
 [variables]
