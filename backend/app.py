@@ -338,6 +338,18 @@ def send_password_reset_email(email, reset_token):
         logger.error(f"Failed to send password reset email: {e}")
         return False
 
+# ---- Main Routes ----
+
+@app.route('/')
+def index():
+    """Landing page with login/register forms."""
+    return render_template('index.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Dashboard page for authenticated users."""
+    return render_template('dashboard.html')
+
 # ---- Authentication Routes ----
 
 @app.route('/api/auth/register', methods=['POST'])
