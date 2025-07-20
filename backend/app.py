@@ -55,6 +55,11 @@ CORS(app, resources={
         "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
+    },
+    r"/debug/*": {
+        "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
@@ -599,7 +604,7 @@ def admin_get_users():
     """Get all users for admin."""
     # Simple admin authentication - in production, use proper auth
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header or 'admin-access' not in auth_header:
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
     
     users = User.query.all()
@@ -621,7 +626,7 @@ def admin_get_users():
 def admin_create_user():
     """Create a new user."""
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header or 'admin-access' not in auth_header:
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
     
     data = request.json
@@ -661,7 +666,7 @@ def admin_create_user():
 def admin_reset_password():
     """Reset a user's password."""
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header or 'admin-access' not in auth_header:
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
     
     user_id = request.view_args['user_id']
@@ -685,7 +690,7 @@ def admin_reset_password():
 def admin_delete_user():
     """Delete a user."""
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header or 'admin-access' not in auth_header:
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
     
     user_id = request.view_args['user_id']
@@ -704,7 +709,7 @@ def admin_delete_user():
 def admin_get_stats():
     """Get admin statistics."""
     auth_header = request.headers.get('Authorization', '')
-    if not auth_header or 'admin-access' not in auth_header:
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
     
     total_users = User.query.count()
@@ -718,6 +723,28 @@ def admin_get_stats():
         "total_users": total_users,
         "active_users": active_users,
         "recent_logins": recent_logins
+    }), 200
+
+@app.route('/api/admin/test', methods=['GET', 'OPTIONS'])
+def admin_test_api():
+    """Test admin API endpoint."""
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+        
+    auth_header = request.headers.get('Authorization', '')
+    logger.info(f"Admin test API called with auth header: {auth_header}")
+    
+    if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
+        return jsonify({
+            "error": "Admin access required",
+            "received_header": auth_header,
+            "expected": "Authorization: Bearer admin-access"
+        }), 401
+    
+    return jsonify({
+        "message": "Admin API is working!",
+        "auth_header": auth_header,
+        "timestamp": datetime.utcnow().isoformat()
     }), 200
 
 # ---- API Credential Routes ----
