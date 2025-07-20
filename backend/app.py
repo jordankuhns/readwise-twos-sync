@@ -692,13 +692,11 @@ def admin_create_user():
     }), 201
 
 @app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
-def admin_reset_password():
+def admin_reset_password(user_id):
     """Reset a user's password."""
     auth_header = request.headers.get('Authorization', '')
     if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
-    
-    user_id = request.view_args['user_id']
     data = request.json
     new_password = data.get('password')
     
