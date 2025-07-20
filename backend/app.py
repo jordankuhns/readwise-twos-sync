@@ -382,9 +382,18 @@ def register():
         }
     }), 201
 
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/api/auth/login', methods=['POST', 'OPTIONS'])
 def login():
     """Login a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', 'https://readwise-twos-sync.vercel.app')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
     data = request.json
     
     # Find user by email
@@ -397,14 +406,20 @@ def login():
     # Create access token
     access_token = create_access_token(identity=user.id)
     
-    return jsonify({
+    response = jsonify({
         "access_token": access_token,
         "user": {
             "id": user.id,
             "email": user.email,
             "name": user.name
         }
-    }), 200
+    })
+    
+    # Add CORS headers to response
+    response.headers.add('Access-Control-Allow-Origin', 'https://readwise-twos-sync.vercel.app')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    return response, 200
 
 @app.route('/api/auth/social-login', methods=['POST'])
 def social_login():
