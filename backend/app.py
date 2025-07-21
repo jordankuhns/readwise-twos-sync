@@ -67,10 +67,23 @@ if 'railway.internal' in app.config['SQLALCHEMY_DATABASE_URI']:
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-# CORS configuration - using manual headers for login endpoint
-# Global CORS disabled to prevent Railway edge conflicts
+# CORS configuration
 frontend_url = os.environ.get('FRONTEND_URL', 'https://readwise-twos-sync.vercel.app')
 railway_url = "https://web-production-0b0f42.up.railway.app"
+
+# Helper function to add CORS headers
+def add_cors_headers(response, origin=None):
+    """Add CORS headers to response"""
+    if not origin:
+        origin = frontend_url
+    response.headers.add('Access-Control-Allow-Origin', origin)
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    return response
+
+# Initialize Flask-CORS for non-critical endpoints
+CORS(app, origins=[frontend_url, railway_url, "http://localhost:3000", "http://localhost:5000", "http://127.0.0.1:5000"])
 
 # Encryption for API tokens
 encryption_key = os.environ.get('ENCRYPTION_KEY')
@@ -645,9 +658,14 @@ def admin_dashboard():
         </html>
         """
 
-@app.route('/api/admin/users', methods=['GET'])
+@app.route('/api/admin/users', methods=['GET', 'OPTIONS'])
 def admin_get_users():
     """Get all users for admin."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
     # Simple admin authentication - in production, use proper auth
     auth_header = request.headers.get('Authorization', '')
     if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
@@ -666,7 +684,8 @@ def admin_get_users():
             'created_at': user.created_at.isoformat() if user.created_at else None
         })
     
-    return jsonify(users_data), 200
+    response = jsonify(users_data)
+    return add_cors_headers(response), 200
 
 @app.route('/api/admin/users', methods=['POST'])
 def admin_create_user():
@@ -749,9 +768,14 @@ def admin_delete_user():
     
     return jsonify({"message": f"User {user.email} deleted successfully"}), 200
 
-@app.route('/api/admin/stats', methods=['GET'])
+@app.route('/api/admin/stats', methods=['GET', 'OPTIONS'])
 def admin_get_stats():
     """Get admin statistics."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
     auth_header = request.headers.get('Authorization', '')
     if not auth_header or ('admin-access' not in auth_header and 'Bearer admin-access' not in auth_header):
         return jsonify({"error": "Admin access required"}), 401
@@ -767,11 +791,13 @@ def admin_get_stats():
     # In a real app, you'd track login timestamps
     recent_logins = total_users
     
-    return jsonify({
+    response = jsonify({
         "total_users": total_users,
         "active_users": active_users,
         "recent_logins": recent_logins
-    }), 200
+    })
+    
+    return add_cors_headers(response), 200
 
 @app.route('/api/admin/test', methods=['GET', 'OPTIONS'])
 def admin_test_api():
