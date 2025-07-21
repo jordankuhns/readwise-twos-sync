@@ -75,11 +75,17 @@ railway_url = "https://web-production-0b0f42.up.railway.app"
 def add_cors_headers(response, origin=None):
     """Add CORS headers to response"""
     if not origin:
-        origin = frontend_url
-    response.headers.add('Access-Control-Allow-Origin', origin)
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        # Get origin from request headers
+        request_origin = request.headers.get('Origin')
+        if request_origin and request_origin in [frontend_url, railway_url]:
+            origin = request_origin
+        else:
+            origin = frontend_url
+    
+    response.headers['Access-Control-Allow-Origin'] = origin
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
     return response
 
 # Initialize Flask-CORS for non-critical endpoints
