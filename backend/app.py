@@ -869,9 +869,21 @@ def save_credentials():
     
     return jsonify({"message": "Credentials saved successfully"}), 200
 
-@app.route('/api/credentials', methods=['GET'])
-@jwt_required()
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
 def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
     """Get API credentials for a user."""
     user_id = get_jwt_identity()
     
