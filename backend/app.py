@@ -834,7 +834,8 @@ def save_credentials():
     """Save API credentials for a user."""
     # Handle OPTIONS request for CORS
     if request.method == 'OPTIONS':
-        return jsonify({}), 200
+        response = jsonify({})
+        return add_cors_headers(response)
     
     # For POST requests, require JWT
     try:
@@ -873,7 +874,41 @@ def save_credentials():
     
     # Note: Scheduling would be implemented with a proper job queue
     
-    return jsonify({"message": "Credentials saved successfully"}), 200
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    # Note: Scheduling would be implemented with a proper job queue
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
 
 @app.route('/api/credentials', methods=['GET', 'OPTIONS'])
 def get_credentials():
