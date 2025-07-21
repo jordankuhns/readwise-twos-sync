@@ -1009,7 +1009,8 @@ def get_user():
     """Get user profile."""
     # Handle OPTIONS request for CORS
     if request.method == 'OPTIONS':
-        return jsonify({}), 200
+        response = jsonify({})
+        return add_cors_headers(response)
     
     # For GET requests, require JWT
     try:
@@ -1030,7 +1031,7 @@ def get_user():
     # Check if user has credentials
     has_credentials = ApiCredential.query.filter_by(user_id=user_id).first() is not None
     
-    return jsonify({
+    response = jsonify({
         "id": user.id,
         "email": user.email,
         "name": user.name,
@@ -1043,7 +1044,9 @@ def get_user():
             "time": latest_sync.created_at.isoformat(),
             "highlights_synced": latest_sync.highlights_synced
         } if latest_sync else None
-    }), 200
+    })
+    
+    return add_cors_headers(response), 200
 
 @app.route('/api/user', methods=['PUT'])
 @jwt_required()
