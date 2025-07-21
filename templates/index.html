@@ -444,8 +444,7 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ email, password }),
-                    credentials: 'include'
+                    body: JSON.stringify({ email, password })
                 });
 
                 console.log('Login response status:', response.status);
@@ -483,8 +482,7 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ name, email, password }),
-                    credentials: 'include'
+                    body: JSON.stringify({ name, email, password })
                 });
 
                 console.log('Registration response status:', response.status);
