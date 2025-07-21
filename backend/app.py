@@ -872,6 +872,1718 @@ def save_credentials():
     
     db.session.commit()
     
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
+
+@app.route('/api/credentials', methods=['GET', 'OPTIONS'])
+def get_credentials():
+    """Get API credentials for a user."""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        return add_cors_headers(response)
+    
+    # For GET requests, require JWT
+    try:
+        from flask_jwt_extended import verify_jwt_in_request
+        verify_jwt_in_request()
+        user_id = get_jwt_identity()
+    except Exception as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if not creds:
+        return jsonify({"message": "No credentials found"}), 404
+    
+    # Return credentials with masked tokens for security
+    response = jsonify({
+        "readwise_token": "••••••••" + creds.readwise_token[-4:],
+        "twos_user_id": creds.twos_user_id,
+        "twos_token": "••••••••" + creds.twos_token[-4:],
+        "has_credentials": True
+    })
+    
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200 as e:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    data = request.json
+    
+    # Encrypt sensitive data
+    encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
+    encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
     # Note: Scheduling would be implemented with a proper job queue
     
     response = jsonify({"message": "Credentials saved successfully"})
@@ -883,6 +2595,32 @@ def save_credentials():
     # Encrypt sensitive data
     encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
     encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+    
+    # Check if credentials already exist
+    creds = ApiCredential.query.filter_by(user_id=user_id).first()
+    
+    if creds:
+        # Update existing credentials
+        creds.readwise_token = encrypted_readwise_token
+        creds.twos_user_id = data['twos_user_id']
+        creds.twos_token = encrypted_twos_token
+        creds.updated_at = datetime.utcnow()
+    else:
+        # Create new credentials
+        creds = ApiCredential(
+            user_id=user_id,
+            readwise_token=encrypted_readwise_token,
+            twos_user_id=data['twos_user_id'],
+            twos_token=encrypted_twos_token
+        )
+        db.session.add(creds)
+    
+    db.session.commit()
+    
+    # Note: Scheduling would be implemented with a proper job queue
+    
+    response = jsonify({"message": "Credentials saved successfully"})
+    return add_cors_headers(response), 200
     
     # Check if credentials already exist
     creds = ApiCredential.query.filter_by(user_id=user_id).first()
