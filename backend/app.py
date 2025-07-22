@@ -385,7 +385,7 @@ def save_credentials():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -451,7 +451,7 @@ def get_credentials():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -678,7 +678,7 @@ def trigger_sync():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -752,7 +752,7 @@ def update_sync_settings():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -817,7 +817,7 @@ def get_sync_history():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -868,7 +868,7 @@ def get_user_profile():
         # Manually decode the token
         from flask_jwt_extended import decode_token
         decoded_token = decode_token(token)
-        user_id = decoded_token['sub']
+        user_id = int(decoded_token['sub'])  # Convert to integer for database queries
         
         logger.info(f"Successfully authenticated user {user_id}")
     except Exception as e:
@@ -1316,7 +1316,7 @@ if __name__ == '__main__':
             try:
                 from flask_jwt_extended import decode_token
                 decoded_token = decode_token(token)
-                user_id = decoded_token['sub']
+                user_id = int(decoded_token['sub'])  # Convert to integer for database queries
                 
                 # Reschedule sync job
                 schedule_sync_job(user_id)
