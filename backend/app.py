@@ -780,9 +780,12 @@ def update_sync_settings():
         if 'sync_frequency' in data:
             user.sync_frequency = data['sync_frequency']
             logger.info(f"Updated sync_frequency to {user.sync_frequency}")
-        
+
         db.session.commit()
-        
+
+        # Reschedule the user's sync job with updated settings
+        schedule_sync_job(user.id)
+
         return jsonify({
             "message": "Sync settings updated",
             "settings": {
@@ -1286,47 +1289,22 @@ def debug_simple():
     """Ultra-simple debug route that doesn't touch the database."""
     return "SIMPLE DEBUG: Flask app is running and responding to requests!"
 
+# Initialize scheduler at import time
+with app.app_context():
+    db.create_all()
+
+jobstores = {
+    'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
+scheduler.start()
+
+# Schedule sync jobs for all existing users
+with app.app_context():
+    users = User.query.filter_by(sync_enabled=True).all()
+    for user in users:
+        schedule_sync_job(user.id)
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    
-    # Initialize scheduler
-    jobstores = {
-        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
-    }
-    scheduler = BackgroundScheduler(jobstores=jobstores)
-    scheduler.start()
-    
-    # Schedule sync jobs for all users
-    with app.app_context():
-        users = User.query.filter_by(sync_enabled=True).all()
-        for user in users:
-            schedule_sync_job(user.id)
-    
-    # Update sync settings endpoint to reschedule jobs
-    old_update_sync_settings = update_sync_settings
-    
-    def new_update_sync_settings(*args, **kwargs):
-        response = old_update_sync_settings(*args, **kwargs)
-        
-        # Extract user_id from the request
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                from flask_jwt_extended import decode_token
-                decoded_token = decode_token(token)
-                user_id = int(decoded_token['sub'])  # Convert to integer for database queries
-                
-                # Reschedule sync job
-                schedule_sync_job(user_id)
-            except:
-                pass
-        
-        return response
-    
-    # Replace the update_sync_settings function
-    update_sync_settings = new_update_sync_settings
-    
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
