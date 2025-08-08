@@ -70,6 +70,8 @@ class TestAPIIntegration:
             twos_token='test_twos_token',
             capacities_token='cap_token',
             capacities_space_id='space123',
+            capacities_structure_id='struct123',
+            capacities_text_property_id='textprop123',
             days_back=1
         )
         
@@ -96,6 +98,8 @@ class TestAPIIntegration:
                 twos_token='test_twos_token',
                 capacities_token='cap_token',
                 capacities_space_id='space123',
+                capacities_structure_id='struct123',
+                capacities_text_property_id='textprop123',
                 days_back=1
             )
         
@@ -168,6 +172,8 @@ class TestAPIIntegration:
             twos_token='test_twos_token',
             capacities_token='cap_token',
             capacities_space_id='space123',
+            capacities_structure_id='struct123',
+            capacities_text_property_id='textprop123',
             days_back=1
         )
         
@@ -188,6 +194,8 @@ class TestAPIIntegration:
                 twos_token='test_token',
                 capacities_token='cap_token',
                 capacities_space_id='space123',
+                capacities_structure_id='struct123',
+                capacities_text_property_id='textprop123',
                 days_back=1
             )
 
