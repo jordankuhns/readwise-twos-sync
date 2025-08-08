@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from cryptography.fernet import Fernet
 import pytz
+from db_utils import ensure_capacities_columns
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +30,7 @@ if DATABASE_URL.startswith('postgres://'):
 
 # Create database engine and session
 engine = sa.create_engine(DATABASE_URL)
+ensure_capacities_columns(engine)
 Session = sessionmaker(bind=engine)
 
 # Encryption for API tokens

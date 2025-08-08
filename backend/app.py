@@ -18,6 +18,7 @@ from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
 import pytz
+from db_utils import ensure_capacities_columns
 
 # Load environment variables
 load_dotenv()
@@ -1363,6 +1364,7 @@ def debug_simple():
 # Initialize scheduler at import time
 with app.app_context():
     db.create_all()
+    ensure_capacities_columns(db.engine)
 
 jobstores = {
     'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
