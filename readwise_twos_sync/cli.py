@@ -22,13 +22,15 @@ def setup_logging(verbose: bool = False):
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Sync Readwise highlights to Twos app",
+        description="Sync Readwise highlights to Twos and Capacities",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Environment Variables:
   READWISE_TOKEN    Your Readwise API token (required)
   TWOS_USER_ID      Your Twos user ID (required)
   TWOS_TOKEN        Your Twos API token (required)
+  CAPACITIES_TOKEN  Capacities API token (optional)
+  CAPACITIES_SPACE_ID Capacities space ID (optional)
   SYNC_DAYS_BACK    Days to look back for initial sync (default: 7)
   LAST_SYNC_FILE    Path to sync timestamp file (default: last_sync.json)
 

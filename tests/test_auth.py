@@ -21,7 +21,7 @@ class TestAuthentication:
     def test_register_user(self, app, client):
         """Test user registration."""
         with app.app_context():
-            response = client.post('/api/register', 
+            response = client.post('/api/auth/register',
                 json={
                     'name': 'New User',
                     'email': 'newuser@example.com',
@@ -46,7 +46,7 @@ class TestAuthentication:
             db.session.commit()
             
             # Try to register with same email
-            response = client.post('/api/register',
+            response = client.post('/api/auth/register',
                 json={
                     'name': 'Another User',
                     'email': 'existing@example.com',
@@ -55,7 +55,7 @@ class TestAuthentication:
             )
             assert response.status_code == 400
             data = json.loads(response.data)
-            assert 'already exists' in data['error']
+            assert 'already registered' in data['error']
     
     def test_login_success(self, app, client):
         """Test successful login."""
@@ -70,7 +70,7 @@ class TestAuthentication:
             db.session.commit()
             
             # Login
-            response = client.post('/api/login',
+            response = client.post('/api/auth/login',
                 json={
                     'email': 'test@example.com',
                     'password': 'password123'
@@ -84,7 +84,7 @@ class TestAuthentication:
     def test_login_invalid_credentials(self, app, client):
         """Test login with invalid credentials."""
         with app.app_context():
-            response = client.post('/api/login',
+            response = client.post('/api/auth/login',
                 json={
                     'email': 'nonexistent@example.com',
                     'password': 'wrongpassword'
@@ -92,7 +92,7 @@ class TestAuthentication:
             )
             assert response.status_code == 401
             data = json.loads(response.data)
-            assert 'Invalid credentials' in data['error']
+            assert 'Invalid email or password' in data['error']
     
     def test_protected_endpoint_without_token(self, client):
         """Test accessing protected endpoint without token."""
@@ -106,3 +106,4 @@ class TestAuthentication:
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['email'] == 'test@example.com'
+
