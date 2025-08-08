@@ -97,6 +97,8 @@ class ApiCredential(db.Model):
     twos_token = db.Column(db.Text, nullable=False)
     capacities_space_id = db.Column(db.String(255))
     capacities_token = db.Column(db.Text)
+    capacities_structure_id = db.Column(db.String(255))
+    capacities_text_property_id = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -404,6 +406,8 @@ def save_credentials():
         encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
         capacities_space_id = data.get('capacities_space_id')
         capacities_token = data.get('capacities_token')
+        capacities_structure_id = data.get('capacities_structure_id')
+        capacities_text_property_id = data.get('capacities_text_property_id')
         encrypted_capacities_token = (
             cipher_suite.encrypt(capacities_token.encode()).decode()
             if capacities_token else None
@@ -419,6 +423,8 @@ def save_credentials():
             creds.twos_token = encrypted_twos_token
             creds.capacities_space_id = capacities_space_id
             creds.capacities_token = encrypted_capacities_token
+            creds.capacities_structure_id = capacities_structure_id
+            creds.capacities_text_property_id = capacities_text_property_id
             creds.updated_at = datetime.utcnow()
             logger.info(f"Updated credentials for user {user_id}")
         else:
@@ -429,7 +435,9 @@ def save_credentials():
                 twos_user_id=data['twos_user_id'],
                 twos_token=encrypted_twos_token,
                 capacities_space_id=capacities_space_id,
-                capacities_token=encrypted_capacities_token
+                capacities_token=encrypted_capacities_token,
+                capacities_structure_id=capacities_structure_id,
+                capacities_text_property_id=capacities_text_property_id
             )
             db.session.add(creds)
             logger.info(f"Created new credentials for user {user_id}")
@@ -484,6 +492,8 @@ def get_credentials():
             cipher_suite.decrypt(creds.capacities_token.encode()).decode()
             if creds.capacities_token else None
         )
+        capacities_structure_id = creds.capacities_structure_id
+        capacities_text_property_id = creds.capacities_text_property_id
 
         return jsonify({
             "readwise_token": readwise_token,
@@ -491,6 +501,8 @@ def get_credentials():
             "twos_token": twos_token,
             "capacities_space_id": creds.capacities_space_id,
             "capacities_token": capacities_token,
+            "capacities_structure_id": creds.capacities_structure_id,
+            "capacities_text_property_id": creds.capacities_text_property_id,
             "has_credentials": True
         }), 200
     
@@ -499,7 +511,7 @@ def get_credentials():
         return jsonify({"error": f"Failed to get credentials: {str(e)}"}), 500
 
 # Sync functions
-def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=7, user_id=None):
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, capacities_structure_id=None, capacities_text_property_id=None, days_back=7, user_id=None):
     """Perform a sync from Readwise to Twos and Capacities."""
     logger.info(f"Starting sync for user {user_id}, looking back {days_back} days")
     
@@ -514,13 +526,27 @@ def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None
         if highlights:
             books = fetch_all_books(readwise_token)
             post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            if capacities_token and capacities_space_id:
-                post_highlights_to_capacities(highlights, books, capacities_space_id, capacities_token)
+            if all([capacities_token, capacities_space_id, capacities_structure_id, capacities_text_property_id]):
+                post_highlights_to_capacities(
+                    highlights,
+                    books,
+                    capacities_space_id,
+                    capacities_token,
+                    capacities_structure_id,
+                    capacities_text_property_id,
+                )
             message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
             post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            if capacities_token and capacities_space_id:
-                post_highlights_to_capacities([], {}, capacities_space_id, capacities_token)
+            if all([capacities_token, capacities_space_id, capacities_structure_id, capacities_text_property_id]):
+                post_highlights_to_capacities(
+                    [],
+                    {},
+                    capacities_space_id,
+                    capacities_token,
+                    capacities_structure_id,
+                    capacities_text_property_id,
+                )
             message = "No new highlights found, but posted update to destinations."
         
         # Log successful sync
@@ -677,7 +703,7 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     return successful_posts
 
 
-def post_highlights_to_capacities(highlights, books, space_id, token):
+def post_highlights_to_capacities(highlights, books, space_id, token, structure_id, text_property_id):
     """Post highlights to Capacities."""
     api_url = f"https://api.capacities.io/spaces/{space_id}/blocks"
     headers = {
@@ -686,8 +712,16 @@ def post_highlights_to_capacities(highlights, books, space_id, token):
     }
     today_title = datetime.now().strftime("%Y-%m-%d")
 
+    def build_payload(text: str) -> dict:
+        return {
+            "structureId": structure_id,
+            "properties": {
+                text_property_id: {"type": "text", "value": text}
+            },
+        }
+
     if not highlights:
-        payload = {"content": f"No new highlights for {today_title}"}
+        payload = build_payload(f"No new highlights for {today_title}")
         try:
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
@@ -706,7 +740,7 @@ def post_highlights_to_capacities(highlights, books, space_id, token):
             title = book_meta["title"]
             author = book_meta["author"]
             note_text = f"{title}, {author}: {text}"
-            payload = {"content": note_text.strip()}
+            payload = build_payload(note_text.strip())
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
         except requests.RequestException as e:
@@ -761,6 +795,8 @@ def trigger_sync():
             cipher_suite.decrypt(creds.capacities_token.encode()).decode()
             if creds.capacities_token else None
         )
+        capacities_structure_id = creds.capacities_structure_id
+        capacities_text_property_id = creds.capacities_text_property_id
 
         # Perform actual sync
         try:
@@ -770,6 +806,8 @@ def trigger_sync():
                 twos_token=twos_token,
                 capacities_token=capacities_token,
                 capacities_space_id=creds.capacities_space_id,
+                capacities_structure_id=capacities_structure_id,
+                capacities_text_property_id=capacities_text_property_id,
                 days_back=days_back,
                 user_id=user_id
             )
@@ -1051,6 +1089,8 @@ def run_scheduled_sync(user_id):
                 cipher_suite.decrypt(creds.capacities_token.encode()).decode()
                 if creds.capacities_token else None
             )
+            capacities_structure_id = creds.capacities_structure_id
+            capacities_text_property_id = creds.capacities_text_property_id
 
             # Perform sync (only 1 day back for scheduled syncs)
             result = perform_sync(
@@ -1059,6 +1099,8 @@ def run_scheduled_sync(user_id):
                 twos_token=twos_token,
                 capacities_token=capacities_token,
                 capacities_space_id=creds.capacities_space_id,
+                capacities_structure_id=capacities_structure_id,
+                capacities_text_property_id=capacities_text_property_id,
                 days_back=1,  # Only sync yesterday's highlights
                 user_id=user_id
             )

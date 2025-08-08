@@ -23,7 +23,9 @@ class TestSyncFunctionality:
                     'twos_user_id': 'test_twos_user',
                     'twos_token': 'test_twos_token',
                     'capacities_space_id': 'space123',
-                    'capacities_token': 'cap_token'
+                    'capacities_token': 'cap_token',
+                    'capacities_structure_id': 'struct123',
+                    'capacities_text_property_id': 'textprop123'
                 }
             )
             assert response.status_code == 200
@@ -35,6 +37,8 @@ class TestSyncFunctionality:
             assert creds is not None
             assert creds.twos_user_id == 'test_twos_user'
             assert creds.capacities_space_id == 'space123'
+            assert creds.capacities_structure_id == 'struct123'
+            assert creds.capacities_text_property_id == 'textprop123'
     
     def test_get_credentials(self, app, client, auth_headers):
         """Test retrieving API credentials."""
@@ -52,7 +56,9 @@ class TestSyncFunctionality:
                 twos_user_id='test_twos_user',
                 twos_token=encrypted_twos.decode(),
                 capacities_space_id='space123',
-                capacities_token=encrypted_cap.decode()
+                capacities_token=encrypted_cap.decode(),
+                capacities_structure_id='struct123',
+                capacities_text_property_id='textprop123'
             )
             db.session.add(creds)
             db.session.commit()
@@ -64,6 +70,8 @@ class TestSyncFunctionality:
             assert data['readwise_token'] == 'test_readwise_token'
             assert data['twos_user_id'] == 'test_twos_user'
             assert data['capacities_space_id'] == 'space123'
+            assert data['capacities_structure_id'] == 'struct123'
+            assert data['capacities_text_property_id'] == 'textprop123'
     
     def test_manual_sync(self, app, client, auth_headers, mock_readwise_api, mock_post_requests):
         """Test manual sync operation."""
@@ -81,7 +89,9 @@ class TestSyncFunctionality:
                 twos_user_id='test_twos_user',
                 twos_token=encrypted_twos.decode(),
                 capacities_space_id='space123',
-                capacities_token=encrypted_cap.decode()
+                capacities_token=encrypted_cap.decode(),
+                capacities_structure_id='struct123',
+                capacities_text_property_id='textprop123'
             )
             db.session.add(creds)
             db.session.commit()
