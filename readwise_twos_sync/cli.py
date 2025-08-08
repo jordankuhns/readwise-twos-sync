@@ -2,7 +2,6 @@
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -32,8 +31,6 @@ Environment Variables:
   TWOS_TOKEN        Your Twos API token (required)
   CAPACITIES_TOKEN  Capacities API token (optional)
   CAPACITIES_SPACE_ID Capacities space ID (optional)
-  CAPACITIES_STRUCTURE_ID Capacities structure ID (optional)
-  CAPACITIES_TEXT_PROPERTY_ID Capacities text property ID (optional)
   SYNC_DAYS_BACK    Days to look back for initial sync (default: 7)
   LAST_SYNC_FILE    Path to sync timestamp file (default: last_sync.json)
 
@@ -55,18 +52,6 @@ Examples:
         action="store_true",
         help="Enable verbose logging"
     )
-
-    parser.add_argument(
-        "--capacities-structure-id",
-        type=str,
-        help="Capacities structure ID (optional)"
-    )
-
-    parser.add_argument(
-        "--capacities-text-property-id",
-        type=str,
-        help="Capacities text property ID (optional)"
-    )
     
     parser.add_argument(
         "--version",
@@ -75,17 +60,11 @@ Examples:
     )
     
     args = parser.parse_args()
-
+    
     # Setup logging
     setup_logging(args.verbose)
     logger = logging.getLogger(__name__)
-
-    # Allow CLI args to override environment variables
-    if args.capacities_structure_id:
-        os.environ["CAPACITIES_STRUCTURE_ID"] = args.capacities_structure_id
-    if args.capacities_text_property_id:
-        os.environ["CAPACITIES_TEXT_PROPERTY_ID"] = args.capacities_text_property_id
-
+    
     try:
         # Initialize configuration
         config = Config(env_file=args.env_file)

@@ -50,8 +50,6 @@ TWOS_USER_ID=your_twos_user_id_here
 TWOS_TOKEN=your_twos_api_token_here
 CAPACITIES_TOKEN=your_capacities_token_here
 CAPACITIES_SPACE_ID=your_capacities_space_id_here
-CAPACITIES_STRUCTURE_ID=your_capacities_structure_id_here
-CAPACITIES_TEXT_PROPERTY_ID=your_capacities_text_property_id_here
 
 # Optional settings
 SYNC_DAYS_BACK=7
@@ -214,10 +212,6 @@ flake8 readwise_twos_sync/
 | `READWISE_TOKEN` | Your Readwise API token | Required |
 | `TWOS_USER_ID` | Your Twos user ID | Required |
 | `TWOS_TOKEN` | Your Twos API token | Required |
-| `CAPACITIES_TOKEN` | Capacities API token | Optional |
-| `CAPACITIES_SPACE_ID` | Capacities space ID | Optional |
-| `CAPACITIES_STRUCTURE_ID` | Capacities structure ID | Optional |
-| `CAPACITIES_TEXT_PROPERTY_ID` | Capacities text property ID | Optional |
 | `SYNC_DAYS_BACK` | Days to look back for initial sync | 7 |
 | `LAST_SYNC_FILE` | Path to sync timestamp file | `last_sync.json` |
 

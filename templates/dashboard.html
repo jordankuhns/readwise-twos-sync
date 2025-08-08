@@ -360,25 +360,15 @@
                             <div class="api-key" id="twos-token">••••••••••••</div>
                         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Capacities Space ID</label>
-            <div class="api-key" id="capacities-space-id">Not set</div>
-        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Capacities Space ID</label>
+                            <div class="api-key" id="capacities-space-id">Not set</div>
+                        </div>
 
-        <div class="mb-3">
-            <label class="form-label">Capacities API Token</label>
-            <div class="api-key" id="capacities-token">Not set</div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Capacities Structure ID</label>
-            <div class="api-key" id="capacities-structure-id">Not set</div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Capacities Text Property ID</label>
-            <div class="api-key" id="capacities-text-property-id">Not set</div>
-        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Capacities API Token</label>
+                            <div class="api-key" id="capacities-token">Not set</div>
+                        </div>
                         
                         <div class="d-grid">
                             <button class="btn btn-primary" id="update-credentials-btn">
@@ -449,31 +439,21 @@
                             </div>
                         </div>
 
-        <div class="mb-3">
-            <label for="capacities_space_id" class="form-label">Capacities Space ID</label>
-            <input type="text" class="form-control" id="capacities_space_id">
-            <div class="form-text">
-                From your Capacities workspace settings
-            </div>
-        </div>
+                        <div class="mb-3">
+                            <label for="capacities_space_id" class="form-label">Capacities Space ID</label>
+                            <input type="text" class="form-control" id="capacities_space_id">
+                            <div class="form-text">
+                                From your Capacities workspace settings
+                            </div>
+                        </div>
 
-        <div class="mb-3">
-            <label for="capacities_token" class="form-label">Capacities API Token</label>
-            <input type="text" class="form-control" id="capacities_token">
-            <div class="form-text">
-                Generate a token in Capacities account settings
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label for="capacities_structure_id" class="form-label">Capacities Structure ID</label>
-            <input type="text" class="form-control" id="capacities_structure_id">
-        </div>
-
-        <div class="mb-3">
-            <label for="capacities_text_property_id" class="form-label">Capacities Text Property ID</label>
-            <input type="text" class="form-control" id="capacities_text_property_id">
-        </div>
+                        <div class="mb-3">
+                            <label for="capacities_token" class="form-label">Capacities API Token</label>
+                            <input type="text" class="form-control" id="capacities_token">
+                            <div class="form-text">
+                                Generate a token in Capacities account settings
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -678,8 +658,6 @@
             document.getElementById('twos-token').textContent = credentials.twos_token;
             document.getElementById('capacities-space-id').textContent = credentials.capacities_space_id || 'Not set';
             document.getElementById('capacities-token').textContent = credentials.capacities_token || 'Not set';
-            document.getElementById('capacities-structure-id').textContent = credentials.capacities_structure_id || 'Not set';
-            document.getElementById('capacities-text-property-id').textContent = credentials.capacities_text_property_id || 'Not set';
         }
         
         // Update history display
@@ -892,8 +870,6 @@
             const twosToken = document.getElementById('twos_token').value;
             const capacitiesSpaceId = document.getElementById('capacities_space_id').value;
             const capacitiesToken = document.getElementById('capacities_token').value;
-            const capacitiesStructureId = document.getElementById('capacities_structure_id').value;
-            const capacitiesTextPropertyId = document.getElementById('capacities_text_property_id').value;
 
             if (!readwiseToken || !twosUserId || !twosToken) {
                 alert('Readwise and Twos fields are required');
@@ -916,9 +892,7 @@
                         twos_user_id: twosUserId,
                         twos_token: twosToken,
                         capacities_space_id: capacitiesSpaceId || null,
-                        capacities_token: capacitiesToken || null,
-                        capacities_structure_id: capacitiesStructureId || null,
-                        capacities_text_property_id: capacitiesTextPropertyId || null
+                        capacities_token: capacitiesToken || null
                     })
                 });
                 
