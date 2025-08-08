@@ -422,8 +422,8 @@ def save_credentials():
             logger.info(f"Created new credentials for user {user_id}")
         
         db.session.commit()
-        
-        return jsonify({"message": "Credentials saved successfully"}), 200
+
+        return jsonify({"message": "Credentials updated successfully"}), 200
     
     except Exception as e:
         logger.error(f"Error saving credentials: {str(e)}")
@@ -460,15 +460,18 @@ def get_credentials():
     
     try:
         creds = ApiCredential.query.filter_by(user_id=user_id).first()
-        
+
         if not creds:
             return jsonify({"message": "No credentials found", "has_credentials": False}), 404
-        
-        # Return credentials with masked tokens for security
+
+        # Decrypt tokens before returning them
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+
         return jsonify({
-            "readwise_token": "••••••••" + creds.readwise_token[-4:] if len(creds.readwise_token) > 4 else "••••••••",
+            "readwise_token": readwise_token,
             "twos_user_id": creds.twos_user_id,
-            "twos_token": "••••••••" + creds.twos_token[-4:] if len(creds.twos_token) > 4 else "••••••••",
+            "twos_token": twos_token,
             "has_credentials": True
         }), 200
     
