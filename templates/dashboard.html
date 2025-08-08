@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Readwise to Twos Sync</title>
+    <title>Dashboard | Readwise to Twos/Capacities Sync</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
@@ -255,7 +255,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="/">📚 Readwise → Twos Sync</a>
+            <a class="navbar-brand" href="/">📚 Readwise → Twos/Capacities Sync</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -359,6 +359,16 @@
                             <label class="form-label">Twos API Token</label>
                             <div class="api-key" id="twos-token">••••••••••••</div>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Capacities Space ID</label>
+                            <div class="api-key" id="capacities-space-id">Not set</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Capacities API Token</label>
+                            <div class="api-key" id="capacities-token">Not set</div>
+                        </div>
                         
                         <div class="d-grid">
                             <button class="btn btn-primary" id="update-credentials-btn">
@@ -426,6 +436,22 @@
                             <input type="text" class="form-control" id="twos_token" required>
                             <div class="form-text">
                                 Find this in your Twos app: Settings → API
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="capacities_space_id" class="form-label">Capacities Space ID</label>
+                            <input type="text" class="form-control" id="capacities_space_id">
+                            <div class="form-text">
+                                From your Capacities workspace settings
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="capacities_token" class="form-label">Capacities API Token</label>
+                            <input type="text" class="form-control" id="capacities_token">
+                            <div class="form-text">
+                                Generate a token in Capacities account settings
                             </div>
                         </div>
                     </form>
@@ -630,6 +656,8 @@
             document.getElementById('readwise-token').textContent = credentials.readwise_token;
             document.getElementById('twos-user-id').textContent = credentials.twos_user_id;
             document.getElementById('twos-token').textContent = credentials.twos_token;
+            document.getElementById('capacities-space-id').textContent = credentials.capacities_space_id || 'Not set';
+            document.getElementById('capacities-token').textContent = credentials.capacities_token || 'Not set';
         }
         
         // Update history display
@@ -836,13 +864,15 @@
         async function updateCredentials() {
             const token = checkAuth();
             if (!token) return;
-            
+
             const readwiseToken = document.getElementById('readwise_token').value;
             const twosUserId = document.getElementById('twos_user_id').value;
             const twosToken = document.getElementById('twos_token').value;
-            
+            const capacitiesSpaceId = document.getElementById('capacities_space_id').value;
+            const capacitiesToken = document.getElementById('capacities_token').value;
+
             if (!readwiseToken || !twosUserId || !twosToken) {
-                alert('All fields are required');
+                alert('Readwise and Twos fields are required');
                 return;
             }
             
@@ -860,7 +890,9 @@
                     body: JSON.stringify({
                         readwise_token: readwiseToken,
                         twos_user_id: twosUserId,
-                        twos_token: twosToken
+                        twos_token: twosToken,
+                        capacities_space_id: capacitiesSpaceId || null,
+                        capacities_token: capacitiesToken || null
                     })
                 });
                 

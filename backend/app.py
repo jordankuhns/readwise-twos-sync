@@ -88,12 +88,14 @@ class User(db.Model):
 
 class ApiCredential(db.Model):
     __tablename__ = 'api_credentials'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     readwise_token = db.Column(db.Text, nullable=False)
     twos_user_id = db.Column(db.String(255), nullable=False)
     twos_token = db.Column(db.Text, nullable=False)
+    capacities_space_id = db.Column(db.String(255))
+    capacities_token = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -399,6 +401,12 @@ def save_credentials():
         # Encrypt sensitive data
         encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
         encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
+        capacities_space_id = data.get('capacities_space_id')
+        capacities_token = data.get('capacities_token')
+        encrypted_capacities_token = (
+            cipher_suite.encrypt(capacities_token.encode()).decode()
+            if capacities_token else None
+        )
         
         # Check if credentials already exist
         creds = ApiCredential.query.filter_by(user_id=user_id).first()
@@ -408,6 +416,8 @@ def save_credentials():
             creds.readwise_token = encrypted_readwise_token
             creds.twos_user_id = data['twos_user_id']
             creds.twos_token = encrypted_twos_token
+            creds.capacities_space_id = capacities_space_id
+            creds.capacities_token = encrypted_capacities_token
             creds.updated_at = datetime.utcnow()
             logger.info(f"Updated credentials for user {user_id}")
         else:
@@ -416,7 +426,9 @@ def save_credentials():
                 user_id=user_id,
                 readwise_token=encrypted_readwise_token,
                 twos_user_id=data['twos_user_id'],
-                twos_token=encrypted_twos_token
+                twos_token=encrypted_twos_token,
+                capacities_space_id=capacities_space_id,
+                capacities_token=encrypted_capacities_token
             )
             db.session.add(creds)
             logger.info(f"Created new credentials for user {user_id}")
@@ -464,11 +476,20 @@ def get_credentials():
         if not creds:
             return jsonify({"message": "No credentials found", "has_credentials": False}), 404
         
-        # Return credentials with masked tokens for security
+        # Decrypt tokens before returning
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+        capacities_token = (
+            cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+            if creds.capacities_token else None
+        )
+
         return jsonify({
-            "readwise_token": "••••••••" + creds.readwise_token[-4:] if len(creds.readwise_token) > 4 else "••••••••",
+            "readwise_token": readwise_token,
             "twos_user_id": creds.twos_user_id,
-            "twos_token": "••••••••" + creds.twos_token[-4:] if len(creds.twos_token) > 4 else "••••••••",
+            "twos_token": twos_token,
+            "capacities_space_id": creds.capacities_space_id,
+            "capacities_token": capacities_token,
             "has_credentials": True
         }), 200
     
@@ -477,8 +498,8 @@ def get_credentials():
         return jsonify({"error": f"Failed to get credentials: {str(e)}"}), 500
 
 # Sync functions
-def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=None):
-    """Perform a sync from Readwise to Twos."""
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=7, user_id=None):
+    """Perform a sync from Readwise to Twos and Capacities."""
     logger.info(f"Starting sync for user {user_id}, looking back {days_back} days")
     
     try:
@@ -490,17 +511,16 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
         highlights = fetch_highlights_since(readwise_token, since)
         
         if highlights:
-            # Fetch books metadata
             books = fetch_all_books(readwise_token)
-            
-            # Post to Twos
             post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            
-            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+            if capacities_token and capacities_space_id:
+                post_highlights_to_capacities(highlights, books, capacities_space_id, capacities_token)
+            message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            # Still post a message to Twos
             post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            message = "No new highlights found, but posted update to Twos."
+            if capacities_token and capacities_space_id:
+                post_highlights_to_capacities([], {}, capacities_space_id, capacities_token)
+            message = "No new highlights found, but posted update to destinations."
         
         # Log successful sync
         if user_id:
@@ -655,6 +675,43 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     
     return successful_posts
 
+
+def post_highlights_to_capacities(highlights, books, space_id, token):
+    """Post highlights to Capacities."""
+    api_url = f"https://api.capacities.io/spaces/{space_id}/blocks"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    today_title = datetime.now().strftime("%Y-%m-%d")
+
+    if not highlights:
+        payload = {"content": f"No new highlights for {today_title}"}
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            logger.info("Posted 'no highlights' message to Capacities")
+        except requests.RequestException as e:
+            logger.error(f"Failed to post no-highlights message to Capacities: {e}")
+        return
+
+    for highlight in highlights:
+        try:
+            book_id = highlight.get("book_id")
+            text = highlight.get("text")
+            book_meta = books.get(book_id)
+            if not book_meta:
+                continue
+            title = book_meta["title"]
+            author = book_meta["author"]
+            note_text = f"{title}, {author}: {text}"
+            payload = {"content": note_text.strip()}
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logger.error(f"Failed to post highlight to Capacities: {e}")
+
+
 # ---- Sync Routes ----
 
 @app.route('/api/sync', methods=['POST', 'OPTIONS'])
@@ -699,13 +756,19 @@ def trigger_sync():
         # Decrypt tokens
         readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
         twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
+        capacities_token = (
+            cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+            if creds.capacities_token else None
+        )
+
         # Perform actual sync
         try:
             result = perform_sync(
                 readwise_token=readwise_token,
                 twos_user_id=creds.twos_user_id,
                 twos_token=twos_token,
+                capacities_token=capacities_token,
+                capacities_space_id=creds.capacities_space_id,
                 days_back=days_back,
                 user_id=user_id
             )
@@ -983,12 +1046,18 @@ def run_scheduled_sync(user_id):
             # Decrypt tokens
             readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
             twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            capacities_token = (
+                cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+                if creds.capacities_token else None
+            )
 
             # Perform sync (only 1 day back for scheduled syncs)
             result = perform_sync(
                 readwise_token=readwise_token,
                 twos_user_id=creds.twos_user_id,
                 twos_token=twos_token,
+                capacities_token=capacities_token,
+                capacities_space_id=creds.capacities_space_id,
                 days_back=1,  # Only sync yesterday's highlights
                 user_id=user_id
             )
@@ -1310,3 +1379,5 @@ with app.app_context():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
