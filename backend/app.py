@@ -968,43 +968,45 @@ def schedule_sync_job(user_id):
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
-    logger.info(f"Running scheduled sync for user {user_id}")
-    
-    # Get user credentials
-    creds = ApiCredential.query.filter_by(user_id=user_id).first()
-    
-    if not creds:
-        logger.error(f"No credentials found for user {user_id}")
-        return
-    
-    try:
-        # Decrypt tokens
-        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
-        # Perform sync (only 1 day back for scheduled syncs)
-        result = perform_sync(
-            readwise_token=readwise_token,
-            twos_user_id=creds.twos_user_id,
-            twos_token=twos_token,
-            days_back=1,  # Only sync yesterday's highlights
-            user_id=user_id
-        )
-        
-        logger.info(f"Scheduled sync completed for user {user_id}: {result}")
-        
-    except Exception as e:
-        logger.error(f"Scheduled sync failed for user {user_id}: {e}")
-        
-        # Log the error
-        log = SyncLog(
-            user_id=user_id,
-            status="failed",
-            details=str(e),
-            highlights_synced=0
-        )
-        db.session.add(log)
-        db.session.commit()
+    # Scheduled jobs run outside the request context, so create one manually
+    with app.app_context():
+        logger.info(f"Running scheduled sync for user {user_id}")
+
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+
+        if not creds:
+            logger.error(f"No credentials found for user {user_id}")
+            return
+
+        try:
+            # Decrypt tokens
+            readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+
+            # Perform sync (only 1 day back for scheduled syncs)
+            result = perform_sync(
+                readwise_token=readwise_token,
+                twos_user_id=creds.twos_user_id,
+                twos_token=twos_token,
+                days_back=1,  # Only sync yesterday's highlights
+                user_id=user_id
+            )
+
+            logger.info(f"Scheduled sync completed for user {user_id}: {result}")
+
+        except Exception as e:
+            logger.error(f"Scheduled sync failed for user {user_id}: {e}")
+
+            # Log the error
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                details=str(e),
+                highlights_synced=0
+            )
+            db.session.add(log)
+            db.session.commit()
 
 # ---- Debug Endpoints ----
 
