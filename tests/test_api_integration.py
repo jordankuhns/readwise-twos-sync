@@ -5,17 +5,19 @@ Test API integration with external services
 import pytest
 import json
 from unittest.mock import patch, Mock
+from datetime import datetime
 from backend.app import perform_sync
 
 
 class TestAPIIntegration:
-    """Test integration with Readwise and Twos APIs."""
+    """Test integration with Readwise, Twos, and Capacities APIs."""
     
     @patch('requests.get')
     @patch('requests.post')
     def test_perform_sync_success(self, mock_post, mock_get):
         """Test successful sync operation."""
         # Mock Readwise API responses
+        now = datetime.utcnow().isoformat() + "Z"
         mock_highlights_response = Mock()
         mock_highlights_response.raise_for_status.return_value = None
         mock_highlights_response.json.return_value = {
@@ -24,13 +26,13 @@ class TestAPIIntegration:
                     "id": 1,
                     "text": "Test highlight 1",
                     "book_id": 1,
-                    "updated": "2023-01-01T10:00:00Z"
+                    "updated": now
                 },
                 {
                     "id": 2,
                     "text": "Test highlight 2",
                     "book_id": 2,
-                    "updated": "2023-01-01T11:00:00Z"
+                    "updated": now
                 }
             ],
             "next": None
@@ -66,8 +68,9 @@ class TestAPIIntegration:
             readwise_token='test_readwise_token',
             twos_user_id='test_twos_user',
             twos_token='test_twos_token',
-            days_back=1,
-            user_id=1
+            capacities_token='cap_token',
+            capacities_space_id='space123',
+            days_back=1
         )
         
         # Verify result
@@ -77,7 +80,7 @@ class TestAPIIntegration:
         
         # Verify API calls were made
         assert mock_get.call_count >= 2  # At least highlights and books calls
-        assert mock_post.call_count == 2  # Two highlights posted to Twos
+        assert mock_post.call_count == 4  # Two highlights to Twos and two to Capacities
     
     @patch('requests.get')
     def test_readwise_api_error(self, mock_get):
@@ -91,8 +94,9 @@ class TestAPIIntegration:
                 readwise_token='test_readwise_token',
                 twos_user_id='test_twos_user',
                 twos_token='test_twos_token',
-                days_back=1,
-                user_id=1
+                capacities_token='cap_token',
+                capacities_space_id='space123',
+                days_back=1
             )
         
         assert "Readwise API error" in str(exc_info.value)
@@ -104,8 +108,9 @@ class TestAPIIntegration:
         # Mock successful Readwise responses
         mock_highlights_response = Mock()
         mock_highlights_response.raise_for_status.return_value = None
+        now = datetime.utcnow().isoformat() + "Z"
         mock_highlights_response.json.return_value = {
-            "results": [{"id": 1, "text": "Test", "book_id": 1, "updated": "2023-01-01T10:00:00Z"}],
+            "results": [{"id": 1, "text": "Test", "book_id": 1, "updated": now}],
             "next": None
         }
         
@@ -161,8 +166,9 @@ class TestAPIIntegration:
             readwise_token='test_readwise_token',
             twos_user_id='test_twos_user',
             twos_token='test_twos_token',
-            days_back=1,
-            user_id=1
+            capacities_token='cap_token',
+            capacities_space_id='space123',
+            days_back=1
         )
         
         # Verify result
@@ -171,7 +177,7 @@ class TestAPIIntegration:
         assert 'No new highlights' in result['message']
         
         # Should still post to Twos (no highlights message)
-        assert mock_post.call_count == 1
+        assert mock_post.call_count == 2
     
     def test_invalid_sync_parameters(self):
         """Test sync with invalid parameters."""
@@ -180,6 +186,9 @@ class TestAPIIntegration:
                 readwise_token='',  # Empty token
                 twos_user_id='test_user',
                 twos_token='test_token',
-                days_back=1,
-                user_id=1
+                capacities_token='cap_token',
+                capacities_space_id='space123',
+                days_back=1
             )
+
+

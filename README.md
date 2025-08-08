@@ -1,11 +1,11 @@
 # Readwise to Twos Sync
 
-A Python application that automatically syncs your Readwise highlights to your Twos app. Perfect for keeping your reading insights organized and accessible in your daily workflow.
+A Python application that automatically syncs your Readwise highlights to your Twos and Capacities apps. Perfect for keeping your reading insights organized and accessible in your daily workflow.
 
 ## Features
 
 - 🌐 **Web App**: Simple web interface for one-click syncing
-- 🔄 Automatic syncing of new Readwise highlights to Twos
+- 🔄 Automatic syncing of new Readwise highlights to Twos and Capacities
 - 📅 Configurable sync intervals and lookback periods
 - 🛡️ Robust error handling and logging
 - 🔧 Easy configuration via environment variables or .env files
@@ -48,6 +48,8 @@ Create a `.env` file in your project directory:
 READWISE_TOKEN=your_readwise_token_here
 TWOS_USER_ID=your_twos_user_id_here
 TWOS_TOKEN=your_twos_api_token_here
+CAPACITIES_TOKEN=your_capacities_token_here
+CAPACITIES_SPACE_ID=your_capacities_space_id_here
 
 # Optional settings
 SYNC_DAYS_BACK=7
@@ -261,3 +263,4 @@ MIT License - see LICENSE file for details.
 - 💡 [Request features](https://github.com/yourusername/readwise-twos-sync/issues)
 - 📖 [Documentation](https://github.com/yourusername/readwise-twos-sync)
 Sync between Readwise API and Twos API
+

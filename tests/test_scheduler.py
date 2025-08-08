@@ -147,12 +147,15 @@ class TestScheduler:
             # Add credentials
             encrypted_readwise = cipher_suite.encrypt('test_readwise_token'.encode())
             encrypted_twos = cipher_suite.encrypt('test_twos_token'.encode())
+            encrypted_cap = cipher_suite.encrypt('cap_token'.encode())
 
             creds = ApiCredential(
                 user_id=user.id,
                 readwise_token=encrypted_readwise.decode(),
                 twos_user_id='test_twos_user',
-                twos_token=encrypted_twos.decode()
+                twos_token=encrypted_twos.decode(),
+                capacities_space_id='space123',
+                capacities_token=encrypted_cap.decode()
             )
             db.session.add(creds)
             db.session.commit()
@@ -174,8 +177,11 @@ class TestScheduler:
 
         # Verify perform_sync was called with correct parameters
         mock_perform_sync.assert_called_once()
-        call_args = mock_perform_sync.call_args[1]  # keyword arguments
+        call_args = mock_perform_sync.call_args[1]
 
         assert call_args['twos_user_id'] == 'test_twos_user'
+        assert call_args['capacities_space_id'] == 'space123'
+        assert call_args['capacities_token'] == 'cap_token'
         assert call_args['days_back'] == 1
         assert call_args['user_id'] == user_id
+

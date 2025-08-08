@@ -21,17 +21,20 @@ class TestSyncFunctionality:
                 json={
                     'readwise_token': 'test_readwise_token',
                     'twos_user_id': 'test_twos_user',
-                    'twos_token': 'test_twos_token'
+                    'twos_token': 'test_twos_token',
+                    'capacities_space_id': 'space123',
+                    'capacities_token': 'cap_token'
                 }
             )
             assert response.status_code == 200
             data = json.loads(response.data)
-            assert data['message'] == 'Credentials updated successfully'
+            assert data['message'] == 'Credentials saved successfully'
             
             # Verify credentials were stored
             creds = ApiCredential.query.filter_by(user_id=user_id).first()
             assert creds is not None
             assert creds.twos_user_id == 'test_twos_user'
+            assert creds.capacities_space_id == 'space123'
     
     def test_get_credentials(self, app, client, auth_headers):
         """Test retrieving API credentials."""
@@ -41,12 +44,15 @@ class TestSyncFunctionality:
             # First, store some credentials
             encrypted_readwise = cipher_suite.encrypt('test_readwise_token'.encode())
             encrypted_twos = cipher_suite.encrypt('test_twos_token'.encode())
-            
+            encrypted_cap = cipher_suite.encrypt('cap_token'.encode())
+
             creds = ApiCredential(
                 user_id=user_id,
                 readwise_token=encrypted_readwise.decode(),
                 twos_user_id='test_twos_user',
-                twos_token=encrypted_twos.decode()
+                twos_token=encrypted_twos.decode(),
+                capacities_space_id='space123',
+                capacities_token=encrypted_cap.decode()
             )
             db.session.add(creds)
             db.session.commit()
@@ -57,8 +63,9 @@ class TestSyncFunctionality:
             data = json.loads(response.data)
             assert data['readwise_token'] == 'test_readwise_token'
             assert data['twos_user_id'] == 'test_twos_user'
+            assert data['capacities_space_id'] == 'space123'
     
-    def test_manual_sync(self, app, client, auth_headers, mock_readwise_api, mock_twos_api):
+    def test_manual_sync(self, app, client, auth_headers, mock_readwise_api, mock_post_requests):
         """Test manual sync operation."""
         headers, user_id = auth_headers
         
@@ -66,12 +73,15 @@ class TestSyncFunctionality:
             # Store credentials
             encrypted_readwise = cipher_suite.encrypt('test_readwise_token'.encode())
             encrypted_twos = cipher_suite.encrypt('test_twos_token'.encode())
-            
+            encrypted_cap = cipher_suite.encrypt('cap_token'.encode())
+
             creds = ApiCredential(
                 user_id=user_id,
                 readwise_token=encrypted_readwise.decode(),
                 twos_user_id='test_twos_user',
-                twos_token=encrypted_twos.decode()
+                twos_token=encrypted_twos.decode(),
+                capacities_space_id='space123',
+                capacities_token=encrypted_cap.decode()
             )
             db.session.add(creds)
             db.session.commit()
@@ -90,6 +100,12 @@ class TestSyncFunctionality:
             sync_log = SyncLog.query.filter_by(user_id=user_id).first()
             assert sync_log is not None
             assert sync_log.status == 'success'
+
+            # Ensure posts were made to both services (2 highlights each)
+            twos_calls = [c for c in mock_post_requests.call_args_list if 'twosapp' in c.args[0]]
+            cap_calls = [c for c in mock_post_requests.call_args_list if 'capacities' in c.args[0]]
+            assert len(twos_calls) == 2
+            assert len(cap_calls) == 2
     
     def test_sync_without_credentials(self, client, auth_headers):
         """Test sync without stored credentials."""
@@ -146,5 +162,6 @@ class TestSyncFunctionality:
             response = client.get('/api/sync/history', headers=headers)
             assert response.status_code == 200
             data = json.loads(response.data)
-            assert len(data) == 2
-            assert data[0]['status'] in ['success', 'failed']
+            assert len(data['history']) == 2
+            assert data['history'][0]['status'] in ['success', 'failed']
+

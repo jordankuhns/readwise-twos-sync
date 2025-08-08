@@ -1,5 +1,5 @@
 """
-Sync service for Readwise to Twos
+Sync service for Readwise to Twos and Capacities
 """
 
 import requests
@@ -10,14 +10,16 @@ from datetime import datetime, timedelta
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=None):
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=7, user_id=None):
     """
-    Perform a sync from Readwise to Twos.
+    Perform a sync from Readwise to Twos and Capacities.
     
     Args:
         readwise_token: Readwise API token
         twos_user_id: Twos user ID
         twos_token: Twos API token
+        capacities_token: Capacities API token
+        capacities_space_id: Capacities space identifier
         days_back: Number of days to look back for highlights
         user_id: User ID for logging (optional)
         
@@ -35,17 +37,16 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
         highlights = fetch_highlights_since(readwise_token, since)
         
         if highlights:
-            # Fetch books metadata
             books = fetch_all_books(readwise_token)
-            
-            # Post to Twos
             post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            
-            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+            if capacities_token and capacities_space_id:
+                post_highlights_to_capacities(highlights, books, capacities_space_id, capacities_token)
+            message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            # Still post a message to Twos
             post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            message = "No new highlights found, but posted update to Twos."
+            if capacities_token and capacities_space_id:
+                post_highlights_to_capacities([], {}, capacities_space_id, capacities_token)
+            message = "No new highlights found, but posted update to destinations."
         
         # Return success info for logging by caller
         
@@ -179,3 +180,39 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     logger.info(f"Posted {successful_posts} highlights to Twos")
     if failed_posts > 0:
         logger.warning(f"Failed to post {failed_posts} highlights")
+
+
+def post_highlights_to_capacities(highlights, books, space_id, token):
+    """Post highlights to Capacities."""
+    api_url = f"https://api.capacities.io/spaces/{space_id}/blocks"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    today_title = datetime.now().strftime("%Y-%m-%d")
+
+    if not highlights:
+        payload = {"content": f"No new highlights for {today_title}"}
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            logger.info("Posted 'no highlights' message to Capacities")
+        except requests.RequestException as e:
+            logger.error(f"Failed to post no-highlights message to Capacities: {e}")
+        return
+
+    for highlight in highlights:
+        try:
+            book_id = highlight.get("book_id")
+            text = highlight.get("text")
+            book_meta = books.get(book_id)
+            if not book_meta:
+                continue
+            title = book_meta["title"]
+            author = book_meta["author"]
+            note_text = f"{title}, {author}: {text}"
+            payload = {"content": note_text.strip()}
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logger.error(f"Failed to post highlight to Capacities: {e}")
