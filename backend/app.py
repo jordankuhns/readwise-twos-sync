@@ -780,9 +780,12 @@ def update_sync_settings():
         if 'sync_frequency' in data:
             user.sync_frequency = data['sync_frequency']
             logger.info(f"Updated sync_frequency to {user.sync_frequency}")
-        
+
         db.session.commit()
-        
+
+        # Reschedule the user's sync job with updated settings
+        schedule_sync_job(user.id)
+
         return jsonify({
             "message": "Sync settings updated",
             "settings": {
@@ -965,43 +968,45 @@ def schedule_sync_job(user_id):
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
-    logger.info(f"Running scheduled sync for user {user_id}")
-    
-    # Get user credentials
-    creds = ApiCredential.query.filter_by(user_id=user_id).first()
-    
-    if not creds:
-        logger.error(f"No credentials found for user {user_id}")
-        return
-    
-    try:
-        # Decrypt tokens
-        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
-        # Perform sync (only 1 day back for scheduled syncs)
-        result = perform_sync(
-            readwise_token=readwise_token,
-            twos_user_id=creds.twos_user_id,
-            twos_token=twos_token,
-            days_back=1,  # Only sync yesterday's highlights
-            user_id=user_id
-        )
-        
-        logger.info(f"Scheduled sync completed for user {user_id}: {result}")
-        
-    except Exception as e:
-        logger.error(f"Scheduled sync failed for user {user_id}: {e}")
-        
-        # Log the error
-        log = SyncLog(
-            user_id=user_id,
-            status="failed",
-            details=str(e),
-            highlights_synced=0
-        )
-        db.session.add(log)
-        db.session.commit()
+    # Scheduled jobs run outside the request context, so create one manually
+    with app.app_context():
+        logger.info(f"Running scheduled sync for user {user_id}")
+
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+
+        if not creds:
+            logger.error(f"No credentials found for user {user_id}")
+            return
+
+        try:
+            # Decrypt tokens
+            readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+
+            # Perform sync (only 1 day back for scheduled syncs)
+            result = perform_sync(
+                readwise_token=readwise_token,
+                twos_user_id=creds.twos_user_id,
+                twos_token=twos_token,
+                days_back=1,  # Only sync yesterday's highlights
+                user_id=user_id
+            )
+
+            logger.info(f"Scheduled sync completed for user {user_id}: {result}")
+
+        except Exception as e:
+            logger.error(f"Scheduled sync failed for user {user_id}: {e}")
+
+            # Log the error
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                details=str(e),
+                highlights_synced=0
+            )
+            db.session.add(log)
+            db.session.commit()
 
 # ---- Debug Endpoints ----
 
@@ -1286,47 +1291,22 @@ def debug_simple():
     """Ultra-simple debug route that doesn't touch the database."""
     return "SIMPLE DEBUG: Flask app is running and responding to requests!"
 
+# Initialize scheduler at import time
+with app.app_context():
+    db.create_all()
+
+jobstores = {
+    'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
+scheduler.start()
+
+# Schedule sync jobs for all existing users
+with app.app_context():
+    users = User.query.filter_by(sync_enabled=True).all()
+    for user in users:
+        schedule_sync_job(user.id)
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    
-    # Initialize scheduler
-    jobstores = {
-        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
-    }
-    scheduler = BackgroundScheduler(jobstores=jobstores)
-    scheduler.start()
-    
-    # Schedule sync jobs for all users
-    with app.app_context():
-        users = User.query.filter_by(sync_enabled=True).all()
-        for user in users:
-            schedule_sync_job(user.id)
-    
-    # Update sync settings endpoint to reschedule jobs
-    old_update_sync_settings = update_sync_settings
-    
-    def new_update_sync_settings(*args, **kwargs):
-        response = old_update_sync_settings(*args, **kwargs)
-        
-        # Extract user_id from the request
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                from flask_jwt_extended import decode_token
-                decoded_token = decode_token(token)
-                user_id = int(decoded_token['sub'])  # Convert to integer for database queries
-                
-                # Reschedule sync job
-                schedule_sync_job(user_id)
-            except:
-                pass
-        
-        return response
-    
-    # Replace the update_sync_settings function
-    update_sync_settings = new_update_sync_settings
-    
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)

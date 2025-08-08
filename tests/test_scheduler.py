@@ -143,11 +143,11 @@ class TestScheduler:
             )
             db.session.add(user)
             db.session.commit()
-            
+
             # Add credentials
             encrypted_readwise = cipher_suite.encrypt('test_readwise_token'.encode())
             encrypted_twos = cipher_suite.encrypt('test_twos_token'.encode())
-            
+
             creds = ApiCredential(
                 user_id=user.id,
                 readwise_token=encrypted_readwise.decode(),
@@ -156,24 +156,26 @@ class TestScheduler:
             )
             db.session.add(creds)
             db.session.commit()
-            
-            # Mock successful sync
-            mock_perform_sync.return_value = {
-                'success': True,
-                'highlights_synced': 3,
-                'message': 'Test sync completed'
-            }
-            
-            # Import and run the scheduled sync function
-            from backend.app import run_scheduled_sync
-            
-            # Execute scheduled sync
-            run_scheduled_sync(user.id)
-            
-            # Verify perform_sync was called with correct parameters
-            mock_perform_sync.assert_called_once()
-            call_args = mock_perform_sync.call_args[1]  # keyword arguments
-            
-            assert call_args['twos_user_id'] == 'test_twos_user'
-            assert call_args['days_back'] == 1
-            assert call_args['user_id'] == user.id
+
+            user_id = user.id
+
+        # Mock successful sync
+        mock_perform_sync.return_value = {
+            'success': True,
+            'highlights_synced': 3,
+            'message': 'Test sync completed'
+        }
+
+        # Import and run the scheduled sync function
+        from backend.app import run_scheduled_sync
+
+        # Execute scheduled sync outside of an application context
+        run_scheduled_sync(user_id)
+
+        # Verify perform_sync was called with correct parameters
+        mock_perform_sync.assert_called_once()
+        call_args = mock_perform_sync.call_args[1]  # keyword arguments
+
+        assert call_args['twos_user_id'] == 'test_twos_user'
+        assert call_args['days_back'] == 1
+        assert call_args['user_id'] == user_id
