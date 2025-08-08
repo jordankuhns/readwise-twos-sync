@@ -48,16 +48,6 @@ class Config:
         return os.environ.get("CAPACITIES_SPACE_ID")
 
     @property
-    def capacities_structure_id(self) -> Optional[str]:
-        """Get Capacities structure ID if provided."""
-        return os.environ.get("CAPACITIES_STRUCTURE_ID")
-
-    @property
-    def capacities_text_property_id(self) -> Optional[str]:
-        """Get Capacities text property ID if provided."""
-        return os.environ.get("CAPACITIES_TEXT_PROPERTY_ID")
-
-    @property
     def sync_days_back(self) -> int:
         """Number of days to look back for initial sync."""
         return int(os.environ.get("SYNC_DAYS_BACK", "7"))
@@ -78,24 +68,17 @@ class Config:
                 "Please set these in your environment or .env file.",
             )
 
-        # Capacities credentials are optional, but if any is provided,
-        # ensure CAPACITIES_TOKEN, CAPACITIES_SPACE_ID, CAPACITIES_STRUCTURE_ID,
-        # and CAPACITIES_TEXT_PROPERTY_ID are all set.
+        # Capacities credentials are optional, but if one is provided,
+        # ensure both CAPACITIES_TOKEN and CAPACITIES_SPACE_ID are set.
         cap_token = os.environ.get("CAPACITIES_TOKEN")
         cap_space = os.environ.get("CAPACITIES_SPACE_ID")
-        cap_structure = os.environ.get("CAPACITIES_STRUCTURE_ID")
-        cap_text_prop = os.environ.get("CAPACITIES_TEXT_PROPERTY_ID")
-        if any([cap_token, cap_space, cap_structure, cap_text_prop]):
-            missing = []
-            if not cap_token:
-                missing.append("CAPACITIES_TOKEN")
-            if not cap_space:
-                missing.append("CAPACITIES_SPACE_ID")
-            if not cap_structure:
-                missing.append("CAPACITIES_STRUCTURE_ID")
-            if not cap_text_prop:
-                missing.append("CAPACITIES_TEXT_PROPERTY_ID")
-            if missing:
+        if cap_token or cap_space:
+            if not (cap_token and cap_space):
+                missing = []
+                if not cap_token:
+                    missing.append("CAPACITIES_TOKEN")
+                if not cap_space:
+                    missing.append("CAPACITIES_SPACE_ID")
                 raise ValueError(
                     f"Missing required Capacities environment variables: {', '.join(missing)}"
                 )

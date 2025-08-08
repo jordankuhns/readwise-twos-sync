@@ -42,7 +42,5 @@ def test_app_auto_adds_capacities_columns(tmp_path):
             columns = [c["name"] for c in inspector.get_columns("api_credentials")]
             assert "capacities_space_id" in columns
             assert "capacities_token" in columns
-            assert "capacities_structure_id" in columns
-            assert "capacities_text_property_id" in columns
     finally:
         app_module.scheduler.shutdown(wait=False)

@@ -155,9 +155,7 @@ class TestScheduler:
                 twos_user_id='test_twos_user',
                 twos_token=encrypted_twos.decode(),
                 capacities_space_id='space123',
-                capacities_token=encrypted_cap.decode(),
-                capacities_structure_id='struct123',
-                capacities_text_property_id='textprop123'
+                capacities_token=encrypted_cap.decode()
             )
             db.session.add(creds)
             db.session.commit()
@@ -184,8 +182,6 @@ class TestScheduler:
         assert call_args['twos_user_id'] == 'test_twos_user'
         assert call_args['capacities_space_id'] == 'space123'
         assert call_args['capacities_token'] == 'cap_token'
-        assert call_args['capacities_structure_id'] == 'struct123'
-        assert call_args['capacities_text_property_id'] == 'textprop123'
         assert call_args['days_back'] == 1
         assert call_args['user_id'] == user_id
 
