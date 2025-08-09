@@ -125,8 +125,8 @@ def mock_readwise_api():
 
 @pytest.fixture
 def mock_post_requests():
-    """Mock external POST requests (Twos and Capacities)."""
-    with patch('backend.app.requests.post') as mock_post:
+    """Mock external POST requests to third-party services."""
+    with patch('requests.post') as mock_post:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.status_code = 200
