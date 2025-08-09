@@ -80,7 +80,12 @@ class TestAPIIntegration:
         
         # Verify API calls were made
         assert mock_get.call_count >= 2  # At least highlights and books calls
-        assert mock_post.call_count == 4  # Two highlights to Twos and two to Capacities
+        assert mock_post.call_count == 3  # Two highlights to Twos and one to Capacities
+
+        twos_calls = [c for c in mock_post.call_args_list if 'twosapp' in c.args[0]]
+        cap_calls = [c for c in mock_post.call_args_list if 'capacities' in c.args[0]]
+        assert len(twos_calls) == 2
+        assert len(cap_calls) == 1
     
     @patch('requests.get')
     def test_readwise_api_error(self, mock_get):
@@ -176,8 +181,12 @@ class TestAPIIntegration:
         assert result['highlights_synced'] == 0
         assert 'No new highlights' in result['message']
         
-        # Should still post to Twos (no highlights message)
+        # Should still post to both services (one each)
         assert mock_post.call_count == 2
+        twos_calls = [c for c in mock_post.call_args_list if 'twosapp' in c.args[0]]
+        cap_calls = [c for c in mock_post.call_args_list if 'capacities' in c.args[0]]
+        assert len(twos_calls) == 1
+        assert len(cap_calls) == 1
     
     def test_invalid_sync_parameters(self):
         """Test sync with invalid parameters."""
