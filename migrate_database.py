@@ -104,7 +104,8 @@ def migrate_database():
             print("\n📋 Creating api_credentials table...")
             db.create_all()
         else:
-            cred_columns = [col['name'] for col in inspector.get_columns('api_credentials')]
+            cred_columns_info = inspector.get_columns('api_credentials')
+            cred_columns = [col['name'] for col in cred_columns_info]
             print(f"\n📋 api_credentials columns: {cred_columns}")
             cred_migrations = []
 
@@ -113,6 +114,11 @@ def migrate_database():
 
             if 'capacities_token' not in cred_columns:
                 cred_migrations.append("ADD COLUMN capacities_token TEXT")
+
+            # Ensure Twos columns are nullable
+            for col in cred_columns_info:
+                if col['name'] in ('twos_user_id', 'twos_token') and not col.get('nullable', True):
+                    cred_migrations.append(f"ALTER COLUMN {col['name']} DROP NOT NULL")
 
             if cred_migrations:
                 print(f"🔧 Applying {len(cred_migrations)} api_credentials migrations...")

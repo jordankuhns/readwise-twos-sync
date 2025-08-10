@@ -18,7 +18,10 @@ from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
 import pytz
-from db_utils import ensure_capacities_columns
+try:
+    from .db_utils import ensure_capacities_columns
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from db_utils import ensure_capacities_columns
 from readwise_twos_sync.capacities_client import CapacitiesClient
 
 # Load environment variables
@@ -94,8 +97,8 @@ class ApiCredential(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     readwise_token = db.Column(db.Text, nullable=False)
-    twos_user_id = db.Column(db.String(255), nullable=False)
-    twos_token = db.Column(db.Text, nullable=False)
+    twos_user_id = db.Column(db.String(255))
+    twos_token = db.Column(db.Text)
     capacities_space_id = db.Column(db.String(255))
     capacities_token = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -397,26 +400,35 @@ def save_credentials():
         return jsonify({"error": "Authentication required"}), 401
     
     try:
-        data = request.json
+        data = request.json or {}
         logger.info(f"Saving credentials for user {user_id}")
-        
+
+        readwise_token = data.get('readwise_token')
+        if not readwise_token:
+            return jsonify({"error": "readwise_token is required"}), 400
+
+        twos_user_id = data.get('twos_user_id') or None
+        twos_token = data.get('twos_token') or None
+        capacities_space_id = data.get('capacities_space_id') or None
+        capacities_token = data.get('capacities_token') or None
+
         # Encrypt sensitive data
-        encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
-        encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
-        capacities_space_id = data.get('capacities_space_id')
-        capacities_token = data.get('capacities_token')
+        encrypted_readwise_token = cipher_suite.encrypt(readwise_token.encode()).decode()
+        encrypted_twos_token = (
+            cipher_suite.encrypt(twos_token.encode()).decode() if twos_token else None
+        )
         encrypted_capacities_token = (
             cipher_suite.encrypt(capacities_token.encode()).decode()
             if capacities_token else None
         )
-        
+
         # Check if credentials already exist
         creds = ApiCredential.query.filter_by(user_id=user_id).first()
-        
+
         if creds:
             # Update existing credentials
             creds.readwise_token = encrypted_readwise_token
-            creds.twos_user_id = data['twos_user_id']
+            creds.twos_user_id = twos_user_id
             creds.twos_token = encrypted_twos_token
             creds.capacities_space_id = capacities_space_id
             creds.capacities_token = encrypted_capacities_token
@@ -427,7 +439,7 @@ def save_credentials():
             creds = ApiCredential(
                 user_id=user_id,
                 readwise_token=encrypted_readwise_token,
-                twos_user_id=data['twos_user_id'],
+                twos_user_id=twos_user_id,
                 twos_token=encrypted_twos_token,
                 capacities_space_id=capacities_space_id,
                 capacities_token=encrypted_capacities_token
@@ -480,7 +492,10 @@ def get_credentials():
         
         # Decrypt tokens before returning
         readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+        twos_token = (
+            cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            if creds.twos_token else None
+        )
         capacities_token = (
             cipher_suite.decrypt(creds.capacities_token.encode()).decode()
             if creds.capacities_token else None
@@ -520,12 +535,14 @@ def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None
 
         if highlights:
             books = fetch_all_books(readwise_token)
-            post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
+            if twos_user_id and twos_token:
+                post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
             if capacities_client:
                 capacities_client.post_highlights(highlights, books)
             message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            post_highlights_to_twos([], {}, twos_user_id, twos_token)
+            if twos_user_id and twos_token:
+                post_highlights_to_twos([], {}, twos_user_id, twos_token)
             if capacities_client:
                 capacities_client.post_highlights([], {})
             message = "No new highlights found, but posted update to destinations."
@@ -728,7 +745,10 @@ def trigger_sync():
         
         # Decrypt tokens
         readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+        twos_token = (
+            cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            if creds.twos_token else None
+        )
         capacities_token = (
             cipher_suite.decrypt(creds.capacities_token.encode()).decode()
             if creds.capacities_token else None
@@ -1018,7 +1038,10 @@ def run_scheduled_sync(user_id):
         try:
             # Decrypt tokens
             readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            twos_token = (
+                cipher_suite.decrypt(creds.twos_token.encode()).decode()
+                if creds.twos_token else None
+            )
             capacities_token = (
                 cipher_suite.decrypt(creds.capacities_token.encode()).decode()
                 if creds.capacities_token else None
@@ -1103,16 +1126,21 @@ def debug_trigger_sync(user_id):
         logger.info(f"Debug: Found credentials for user {user_id}")
         logger.info(f"Debug: Twos User ID: {creds.twos_user_id}")
         logger.info(f"Debug: Readwise token length: {len(creds.readwise_token)}")
-        logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
+        if creds.twos_token:
+            logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
         
         try:
             # Decrypt tokens
             readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
             logger.info(f"Debug: Successfully decrypted Readwise token")
             
-            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-            logger.info(f"Debug: Successfully decrypted Twos token")
-            
+            twos_token = (
+                cipher_suite.decrypt(creds.twos_token.encode()).decode()
+                if creds.twos_token else None
+            )
+            if twos_token:
+                logger.info(f"Debug: Successfully decrypted Twos token")
+
             # Perform sync
             logger.info(f"Debug: Starting sync for user {user_id}")
             result = perform_sync(

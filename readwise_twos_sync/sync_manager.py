@@ -25,7 +25,11 @@ class SyncManager:
         """
         self.config = config or Config()
         self.readwise_client = ReadwiseClient(self.config.readwise_token)
-        self.twos_client = TwosClient(self.config.twos_user_id, self.config.twos_token)
+        self.twos_client: Optional[TwosClient] = None
+        if self.config.twos_user_id and self.config.twos_token:
+            self.twos_client = TwosClient(
+                self.config.twos_user_id, self.config.twos_token
+            )
         self.capacities_client: Optional[CapacitiesClient] = None
         if self.config.capacities_token and self.config.capacities_space_id:
             self.capacities_client = CapacitiesClient(
@@ -42,14 +46,19 @@ class SyncManager:
 
             highlights = self.readwise_client.fetch_highlights_since(last_sync)
 
+            if not self.twos_client and not self.capacities_client:
+                raise ValueError("No sync destinations configured")
+
             if highlights:
                 books = self.readwise_client.fetch_all_books()
-                self.twos_client.post_highlights(highlights, books)
+                if self.twos_client:
+                    self.twos_client.post_highlights(highlights, books)
                 if self.capacities_client:
                     self.capacities_client.post_highlights(highlights, books)
             else:
                 logger.info("No new highlights found")
-                self.twos_client.post_highlights([], {})
+                if self.twos_client:
+                    self.twos_client.post_highlights([], {})
                 if self.capacities_client:
                     self.capacities_client.post_highlights([], {})
 
