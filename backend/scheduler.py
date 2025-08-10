@@ -14,7 +14,10 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from cryptography.fernet import Fernet
 import pytz
-from db_utils import ensure_capacities_columns
+try:
+    from .db_utils import ensure_capacities_columns
+except ImportError:  # pragma: no cover
+    from db_utils import ensure_capacities_columns
 from readwise_twos_sync.capacities_client import CapacitiesClient
 
 # Load environment variables
@@ -219,12 +222,14 @@ def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None
 
         if highlights:
             books = fetch_all_books(readwise_token)
-            post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
+            if twos_user_id and twos_token:
+                post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
             if capacities_client:
                 capacities_client.post_highlights(highlights, books)
             message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            post_highlights_to_twos([], {}, twos_user_id, twos_token)
+            if twos_user_id and twos_token:
+                post_highlights_to_twos([], {}, twos_user_id, twos_token)
             if capacities_client:
                 capacities_client.post_highlights([], {})
             message = "No new highlights found, but posted update to destinations."
@@ -286,7 +291,10 @@ def run_scheduled_sync(user_id):
     try:
         # Decrypt tokens
         readwise_token = cipher_suite.decrypt(creds_result.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds_result.twos_token.encode()).decode()
+        twos_token = (
+            cipher_suite.decrypt(creds_result.twos_token.encode()).decode()
+            if creds_result.twos_token else None
+        )
         capacities_token = (
             cipher_suite.decrypt(creds_result.capacities_token.encode()).decode()
             if creds_result.capacities_token else None

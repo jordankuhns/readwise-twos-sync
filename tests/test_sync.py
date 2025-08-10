@@ -35,6 +35,28 @@ class TestSyncFunctionality:
             assert creds is not None
             assert creds.twos_user_id == 'test_twos_user'
             assert creds.capacities_space_id == 'space123'
+
+    def test_update_credentials_capacities_only(self, app, client, auth_headers):
+        """Test updating credentials when only Capacities is enabled."""
+        headers, user_id = auth_headers
+
+        with app.app_context():
+            response = client.post('/api/credentials',
+                headers=headers,
+                json={
+                    'readwise_token': 'rw_token',
+                    'twos_user_id': None,
+                    'twos_token': None,
+                    'capacities_space_id': 'space123',
+                    'capacities_token': 'cap_token'
+                }
+            )
+            assert response.status_code == 200
+
+            creds = ApiCredential.query.filter_by(user_id=user_id).first()
+            assert creds is not None
+            assert creds.twos_user_id is None
+            assert creds.capacities_space_id == 'space123'
     
     def test_get_credentials(self, app, client, auth_headers):
         """Test retrieving API credentials."""
