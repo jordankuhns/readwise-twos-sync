@@ -6,7 +6,8 @@ All dependencies included in one file to avoid import issues
 import os
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, redirect, url_for, session
+from functools import wraps
+from flask import Flask, request, jsonify, redirect, url_for, session, render_template
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
@@ -27,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../static', static_url_path='/static')
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
@@ -107,6 +108,52 @@ class SyncLog(db.Model):
     details = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# ---- Admin Authentication ----
+
+def require_admin():
+    """Decorator to require admin authentication."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user is logged in
+            if 'user_id' not in session:
+                return redirect(url_for('login'))
+            
+            # Get current user
+            user = User.query.get(session['user_id'])
+            if not user:
+                return redirect(url_for('login'))
+            
+            # Check if user is the admin (your email)
+            if user.email != 'jkuhns13@gmail.com':
+                return jsonify({"error": "Access denied. Admin privileges required."}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def require_admin_api():
+    """Decorator to require admin authentication for API routes."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user is logged in
+            if 'user_id' not in session:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            # Get current user
+            user = User.query.get(session['user_id'])
+            if not user:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            # Check if user is the admin (your email)
+            if user.email != 'jkuhns13@gmail.com':
+                return jsonify({"error": "Access denied. Admin privileges required."}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # Routes
 @app.route('/')
 def root():
@@ -126,6 +173,7 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 @app.route('/debug')
+@require_admin()
 def debug():
     """Debug endpoint to check if the app is running."""
     logger.info("Debug endpoint called")
@@ -1006,6 +1054,7 @@ def run_scheduled_sync(user_id):
 # ---- Debug Endpoints ----
 
 @app.route('/debug/users', methods=['GET'])
+@require_admin()
 def debug_list_users():
     """List all users for debugging."""
     logger.info("Debug: Listing all users")
@@ -1037,6 +1086,7 @@ def debug_list_users():
         return jsonify({"error": f"Error listing users: {str(e)}"}), 500
 
 @app.route('/debug/trigger-sync/<user_id>', methods=['GET'])
+@require_admin()
 def debug_trigger_sync(user_id):
     """Manually trigger a sync for debugging."""
     logger.info(f"Debug: Manually triggering sync for user {user_id}")
@@ -1093,60 +1143,63 @@ def debug_trigger_sync(user_id):
         logger.error(f"Debug: Traceback: {traceback.format_exc()}")
         return jsonify({"error": f"Debug sync failed: {str(e)}"}), 500
 
+# ---- Admin Authentication ----
+
+def require_admin():
+    """Decorator to require admin authentication."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user is logged in
+            if 'user_id' not in session:
+                return redirect(url_for('login'))
+            
+            # Get current user
+            user = User.query.get(session['user_id'])
+            if not user:
+                return redirect(url_for('login'))
+            
+            # Check if user is the admin (your email)
+            if user.email != 'jkuhns13@gmail.com':
+                return jsonify({"error": "Access denied. Admin privileges required."}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def require_admin_api():
+    """Decorator to require admin authentication for API routes."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user is logged in
+            if 'user_id' not in session:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            # Get current user
+            user = User.query.get(session['user_id'])
+            if not user:
+                return jsonify({"error": "Authentication required"}), 401
+            
+            # Check if user is the admin (your email)
+            if user.email != 'jkuhns13@gmail.com':
+                return jsonify({"error": "Access denied. Admin privileges required."}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # ---- Admin Routes ----
 
 @app.route('/admin')
 @app.route('/admin/')
+@require_admin()
 def admin_dashboard():
-    """Admin dashboard page."""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Admin Console - Readwise Twos Sync</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
-            .admin-container { max-width: 800px; margin: 2rem auto; padding: 2rem; }
-            .admin-card { background: rgba(255, 255, 255, 0.95); border-radius: 20px; padding: 2rem; }
-        </style>
-    </head>
-    <body>
-        <div class="admin-container">
-            <div class="admin-card">
-                <h1 class="text-center mb-4">🔧 Admin Console</h1>
-                
-                <h3>Quick Password Reset</h3>
-                <p>Use this URL pattern to reset any user's password:</p>
-                <code>/debug/reset-password/USER_ID/NEW_PASSWORD</code>
-                
-                <h3>Available Admin Tools</h3>
-                <ul class="list-group mt-3">
-                    <li class="list-group-item">
-                        <a href="/debug/users" class="btn btn-info btn-sm">View All Users</a>
-                        <span class="ms-2">See user list with IDs</span>
-                    </li>
-                    <li class="list-group-item">
-                        <a href="/health" class="btn btn-success btn-sm">System Health</a>
-                        <span class="ms-2">Check system status</span>
-                    </li>
-                </ul>
-                
-                <div class="mt-4">
-                    <h4>Password Reset Instructions:</h4>
-                    <ol>
-                        <li>Go to <a href="/debug/users">/debug/users</a> to find the user ID</li>
-                        <li>Use URL: <code>/debug/reset-password/[USER_ID]/[NEW_PASSWORD]</code></li>
-                        <li>Example: <code>/debug/reset-password/1/newpassword123</code></li>
-                    </ol>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+    """Admin dashboard page - only accessible by jkuhns13@gmail.com."""
+    return render_template('admin.html')
 
 @app.route('/debug/reset-password/<user_id>/<new_password>')
+@require_admin()
 def debug_reset_password(user_id, new_password):
     """Reset a user's password via URL - for emergency access."""
     try:
@@ -1169,7 +1222,156 @@ def debug_reset_password(user_id, new_password):
         logger.error(f"Error resetting password: {e}")
         return jsonify({"error": f"Error resetting password: {str(e)}"}), 500
 
+# ---- Admin API Routes ----
+
+@app.route('/api/admin/users', methods=['GET'])
+@require_admin_api()
+def admin_get_users():
+    """Get all users for admin interface."""
+    try:
+        users = User.query.all()
+        users_data = []
+        
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'name': user.name,
+                'auth_provider': user.auth_provider,
+                'sync_enabled': user.sync_enabled,
+                'sync_time': user.sync_time,
+                'sync_frequency': user.sync_frequency,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            })
+        
+        return jsonify(users_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users', methods=['POST'])
+@require_admin_api()
+def admin_create_user():
+    """Create a new user."""
+    try:
+        data = request.json
+        
+        # Validate required fields
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({"error": "Email and password are required"}), 400
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({"error": "Email already registered"}), 400
+        
+        # Create new user
+        user = User(
+            email=data['email'],
+            name=data.get('name', ''),
+            password_hash=generate_password_hash(data['password']),
+            auth_provider='local'
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "User created successfully",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name
+            }
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@require_admin_api()
+def admin_reset_password(user_id):
+    """Reset a user's password."""
+    try:
+        data = request.json
+        
+        if not data or 'password' not in data:
+            return jsonify({"error": "Password is required"}), 400
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Update password
+        user.password_hash = generate_password_hash(data['password'])
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Password reset successfully for {user.email}"
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error resetting password: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@require_admin_api()
+def admin_delete_user(user_id):
+    """Delete a user."""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Don't allow deleting the admin user
+        if user.email == 'jkuhns13@gmail.com':
+            return jsonify({"error": "Cannot delete admin user"}), 403
+        
+        # Delete related records first
+        ApiCredential.query.filter_by(user_id=user_id).delete()
+        SyncLog.query.filter_by(user_id=user_id).delete()
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"User {user.email} deleted successfully"
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/stats', methods=['GET'])
+@require_admin_api()
+def admin_get_stats():
+    """Get admin statistics."""
+    try:
+        total_users = User.query.count()
+        active_users = User.query.filter_by(sync_enabled=True).count()
+        
+        # Count recent logins (users created in last 30 days as proxy)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_logins = User.query.filter(User.created_at >= thirty_days_ago).count()
+        
+        return jsonify({
+            "total_users": total_users,
+            "active_users": active_users,
+            "recent_logins": recent_logins
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/health-detailed', methods=['GET'])
+@require_admin()
 def health_detailed():
     """Detailed health check including scheduler status."""
     try:
@@ -1220,6 +1422,7 @@ def health_detailed():
         }), 500
 
 @app.route('/debug/scheduler-jobs', methods=['GET'])
+@require_admin()
 def debug_scheduler_jobs():
     """Debug endpoint to check scheduled jobs and their next run times."""
     try:
@@ -1282,6 +1485,7 @@ def test_route():
     })
 
 @app.route('/debug/simple')
+@require_admin()
 def debug_simple():
     """Ultra-simple debug route that doesn't touch the database."""
     return "SIMPLE DEBUG: Flask app is running and responding to requests!"
