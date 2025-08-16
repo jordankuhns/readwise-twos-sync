@@ -99,10 +99,45 @@ def migrate_database():
                 print(f"   Setting auth_provider for {user.email}: local")
         
         db.session.commit()
-        
+        # Migrate api_credentials table for Capacities fields
+        if not inspector.has_table('api_credentials'):
+            print("\n📋 Creating api_credentials table...")
+            db.create_all()
+        else:
+            cred_columns_info = inspector.get_columns('api_credentials')
+            cred_columns = [col['name'] for col in cred_columns_info]
+            print(f"\n📋 api_credentials columns: {cred_columns}")
+            cred_migrations = []
+
+            if 'capacities_space_id' not in cred_columns:
+                cred_migrations.append("ADD COLUMN capacities_space_id VARCHAR(255)")
+
+            if 'capacities_token' not in cred_columns:
+                cred_migrations.append("ADD COLUMN capacities_token TEXT")
+
+            # Ensure Twos columns are nullable
+            for col in cred_columns_info:
+                if col['name'] in ('twos_user_id', 'twos_token') and not col.get('nullable', True):
+                    cred_migrations.append(f"ALTER COLUMN {col['name']} DROP NOT NULL")
+
+            if cred_migrations:
+                print(f"🔧 Applying {len(cred_migrations)} api_credentials migrations...")
+                for migration in cred_migrations:
+                    try:
+                        sql = f"ALTER TABLE api_credentials {migration}"
+                        print(f"   Executing: {sql}")
+                        db.session.execute(text(sql))
+                        db.session.commit()
+                        print("   ✅ Success")
+                    except Exception as e:
+                        print(f"   ⚠️  Warning: {e}")
+                        db.session.rollback()
+            else:
+                print("✅ api_credentials table up to date")
+
         print(f"\n✅ Migration completed successfully!")
         print(f"📊 Total users: {len(users)}")
-        
+
         return True
 
 def main():

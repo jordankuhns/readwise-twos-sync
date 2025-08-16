@@ -19,6 +19,11 @@ from cryptography.fernet import Fernet
 import requests
 from dotenv import load_dotenv
 import pytz
+try:
+    from .db_utils import ensure_capacities_columns
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from db_utils import ensure_capacities_columns
+from readwise_twos_sync.capacities_client import CapacitiesClient
 
 # Load environment variables
 load_dotenv()
@@ -89,12 +94,14 @@ class User(db.Model):
 
 class ApiCredential(db.Model):
     __tablename__ = 'api_credentials'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     readwise_token = db.Column(db.Text, nullable=False)
-    twos_user_id = db.Column(db.String(255), nullable=False)
-    twos_token = db.Column(db.Text, nullable=False)
+    twos_user_id = db.Column(db.String(255))
+    twos_token = db.Column(db.Text)
+    capacities_space_id = db.Column(db.String(255))
+    capacities_token = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -441,21 +448,38 @@ def save_credentials():
         return jsonify({"error": "Authentication required"}), 401
     
     try:
-        data = request.json
+        data = request.json or {}
         logger.info(f"Saving credentials for user {user_id}")
-        
+
+        readwise_token = data.get('readwise_token')
+        if not readwise_token:
+            return jsonify({"error": "readwise_token is required"}), 400
+
+        twos_user_id = data.get('twos_user_id') or None
+        twos_token = data.get('twos_token') or None
+        capacities_space_id = data.get('capacities_space_id') or None
+        capacities_token = data.get('capacities_token') or None
+
         # Encrypt sensitive data
-        encrypted_readwise_token = cipher_suite.encrypt(data['readwise_token'].encode()).decode()
-        encrypted_twos_token = cipher_suite.encrypt(data['twos_token'].encode()).decode()
-        
+        encrypted_readwise_token = cipher_suite.encrypt(readwise_token.encode()).decode()
+        encrypted_twos_token = (
+            cipher_suite.encrypt(twos_token.encode()).decode() if twos_token else None
+        )
+        encrypted_capacities_token = (
+            cipher_suite.encrypt(capacities_token.encode()).decode()
+            if capacities_token else None
+        )
+
         # Check if credentials already exist
         creds = ApiCredential.query.filter_by(user_id=user_id).first()
-        
+
         if creds:
             # Update existing credentials
             creds.readwise_token = encrypted_readwise_token
-            creds.twos_user_id = data['twos_user_id']
+            creds.twos_user_id = twos_user_id
             creds.twos_token = encrypted_twos_token
+            creds.capacities_space_id = capacities_space_id
+            creds.capacities_token = encrypted_capacities_token
             creds.updated_at = datetime.utcnow()
             logger.info(f"Updated credentials for user {user_id}")
         else:
@@ -463,8 +487,10 @@ def save_credentials():
             creds = ApiCredential(
                 user_id=user_id,
                 readwise_token=encrypted_readwise_token,
-                twos_user_id=data['twos_user_id'],
-                twos_token=encrypted_twos_token
+                twos_user_id=twos_user_id,
+                twos_token=encrypted_twos_token,
+                capacities_space_id=capacities_space_id,
+                capacities_token=encrypted_capacities_token
             )
             db.session.add(creds)
             logger.info(f"Created new credentials for user {user_id}")
@@ -512,11 +538,23 @@ def get_credentials():
         if not creds:
             return jsonify({"message": "No credentials found", "has_credentials": False}), 404
         
-        # Return credentials with masked tokens for security
+        # Decrypt tokens before returning
+        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+        twos_token = (
+            cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            if creds.twos_token else None
+        )
+        capacities_token = (
+            cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+            if creds.capacities_token else None
+        )
+
         return jsonify({
-            "readwise_token": "••••••••" + creds.readwise_token[-4:] if len(creds.readwise_token) > 4 else "••••••••",
+            "readwise_token": readwise_token,
             "twos_user_id": creds.twos_user_id,
-            "twos_token": "••••••••" + creds.twos_token[-4:] if len(creds.twos_token) > 4 else "••••••••",
+            "twos_token": twos_token,
+            "capacities_space_id": creds.capacities_space_id,
+            "capacities_token": capacities_token,
             "has_credentials": True
         }), 200
     
@@ -525,8 +563,8 @@ def get_credentials():
         return jsonify({"error": f"Failed to get credentials: {str(e)}"}), 500
 
 # Sync functions
-def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=None):
-    """Perform a sync from Readwise to Twos."""
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=7, user_id=None):
+    """Perform a sync from Readwise to Twos and Capacities."""
     logger.info(f"Starting sync for user {user_id}, looking back {days_back} days")
     
     try:
@@ -536,19 +574,26 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
         
         # Fetch highlights
         highlights = fetch_highlights_since(readwise_token, since)
-        
+
+        capacities_client = None
+        if capacities_token and capacities_space_id:
+            capacities_client = CapacitiesClient(
+                token=capacities_token, space_id=capacities_space_id
+            )
+
         if highlights:
-            # Fetch books metadata
             books = fetch_all_books(readwise_token)
-            
-            # Post to Twos
-            post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            
-            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+            if twos_user_id and twos_token:
+                post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
+            if capacities_client:
+                capacities_client.post_highlights(highlights, books)
+            message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            # Still post a message to Twos
-            post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            message = "No new highlights found, but posted update to Twos."
+            if twos_user_id and twos_token:
+                post_highlights_to_twos([], {}, twos_user_id, twos_token)
+            if capacities_client:
+                capacities_client.post_highlights([], {})
+            message = "No new highlights found, but posted update to destinations."
         
         # Log successful sync
         if user_id:
@@ -703,6 +748,8 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     
     return successful_posts
 
+
+
 # ---- Sync Routes ----
 
 @app.route('/api/sync', methods=['POST', 'OPTIONS'])
@@ -746,14 +793,23 @@ def trigger_sync():
         
         # Decrypt tokens
         readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
+        twos_token = (
+            cipher_suite.decrypt(creds.twos_token.encode()).decode()
+            if creds.twos_token else None
+        )
+        capacities_token = (
+            cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+            if creds.capacities_token else None
+        )
+
         # Perform actual sync
         try:
             result = perform_sync(
                 readwise_token=readwise_token,
                 twos_user_id=creds.twos_user_id,
                 twos_token=twos_token,
+                capacities_token=capacities_token,
+                capacities_space_id=creds.capacities_space_id,
                 days_back=days_back,
                 user_id=user_id
             )
@@ -828,9 +884,12 @@ def update_sync_settings():
         if 'sync_frequency' in data:
             user.sync_frequency = data['sync_frequency']
             logger.info(f"Updated sync_frequency to {user.sync_frequency}")
-        
+
         db.session.commit()
-        
+
+        # Reschedule the user's sync job with updated settings
+        schedule_sync_job(user.id)
+
         return jsonify({
             "message": "Sync settings updated",
             "settings": {
@@ -1013,43 +1072,54 @@ def schedule_sync_job(user_id):
 
 def run_scheduled_sync(user_id):
     """Run a scheduled sync for a user."""
-    logger.info(f"Running scheduled sync for user {user_id}")
-    
-    # Get user credentials
-    creds = ApiCredential.query.filter_by(user_id=user_id).first()
-    
-    if not creds:
-        logger.error(f"No credentials found for user {user_id}")
-        return
-    
-    try:
-        # Decrypt tokens
-        readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-        
-        # Perform sync (only 1 day back for scheduled syncs)
-        result = perform_sync(
-            readwise_token=readwise_token,
-            twos_user_id=creds.twos_user_id,
-            twos_token=twos_token,
-            days_back=1,  # Only sync yesterday's highlights
-            user_id=user_id
-        )
-        
-        logger.info(f"Scheduled sync completed for user {user_id}: {result}")
-        
-    except Exception as e:
-        logger.error(f"Scheduled sync failed for user {user_id}: {e}")
-        
-        # Log the error
-        log = SyncLog(
-            user_id=user_id,
-            status="failed",
-            details=str(e),
-            highlights_synced=0
-        )
-        db.session.add(log)
-        db.session.commit()
+    # Scheduled jobs run outside the request context, so create one manually
+    with app.app_context():
+        logger.info(f"Running scheduled sync for user {user_id}")
+
+        # Get user credentials
+        creds = ApiCredential.query.filter_by(user_id=user_id).first()
+
+        if not creds:
+            logger.error(f"No credentials found for user {user_id}")
+            return
+
+        try:
+            # Decrypt tokens
+            readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
+            twos_token = (
+                cipher_suite.decrypt(creds.twos_token.encode()).decode()
+                if creds.twos_token else None
+            )
+            capacities_token = (
+                cipher_suite.decrypt(creds.capacities_token.encode()).decode()
+                if creds.capacities_token else None
+            )
+
+            # Perform sync (only 1 day back for scheduled syncs)
+            result = perform_sync(
+                readwise_token=readwise_token,
+                twos_user_id=creds.twos_user_id,
+                twos_token=twos_token,
+                capacities_token=capacities_token,
+                capacities_space_id=creds.capacities_space_id,
+                days_back=1,  # Only sync yesterday's highlights
+                user_id=user_id
+            )
+
+            logger.info(f"Scheduled sync completed for user {user_id}: {result}")
+
+        except Exception as e:
+            logger.error(f"Scheduled sync failed for user {user_id}: {e}")
+
+            # Log the error
+            log = SyncLog(
+                user_id=user_id,
+                status="failed",
+                details=str(e),
+                highlights_synced=0
+            )
+            db.session.add(log)
+            db.session.commit()
 
 # ---- Debug Endpoints ----
 
@@ -1106,16 +1176,21 @@ def debug_trigger_sync(user_id):
         logger.info(f"Debug: Found credentials for user {user_id}")
         logger.info(f"Debug: Twos User ID: {creds.twos_user_id}")
         logger.info(f"Debug: Readwise token length: {len(creds.readwise_token)}")
-        logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
+        if creds.twos_token:
+            logger.info(f"Debug: Twos token length: {len(creds.twos_token)}")
         
         try:
             # Decrypt tokens
             readwise_token = cipher_suite.decrypt(creds.readwise_token.encode()).decode()
             logger.info(f"Debug: Successfully decrypted Readwise token")
             
-            twos_token = cipher_suite.decrypt(creds.twos_token.encode()).decode()
-            logger.info(f"Debug: Successfully decrypted Twos token")
-            
+            twos_token = (
+                cipher_suite.decrypt(creds.twos_token.encode()).decode()
+                if creds.twos_token else None
+            )
+            if twos_token:
+                logger.info(f"Debug: Successfully decrypted Twos token")
+
             # Perform sync
             logger.info(f"Debug: Starting sync for user {user_id}")
             result = perform_sync(
@@ -1490,47 +1565,25 @@ def debug_simple():
     """Ultra-simple debug route that doesn't touch the database."""
     return "SIMPLE DEBUG: Flask app is running and responding to requests!"
 
+# Initialize scheduler at import time
+with app.app_context():
+    db.create_all()
+    ensure_capacities_columns(db.engine)
+
+jobstores = {
+    'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
+scheduler.start()
+
+# Schedule sync jobs for all existing users
+with app.app_context():
+    users = User.query.filter_by(sync_enabled=True).all()
+    for user in users:
+        schedule_sync_job(user.id)
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    
-    # Initialize scheduler
-    jobstores = {
-        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
-    }
-    scheduler = BackgroundScheduler(jobstores=jobstores)
-    scheduler.start()
-    
-    # Schedule sync jobs for all users
-    with app.app_context():
-        users = User.query.filter_by(sync_enabled=True).all()
-        for user in users:
-            schedule_sync_job(user.id)
-    
-    # Update sync settings endpoint to reschedule jobs
-    old_update_sync_settings = update_sync_settings
-    
-    def new_update_sync_settings(*args, **kwargs):
-        response = old_update_sync_settings(*args, **kwargs)
-        
-        # Extract user_id from the request
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            try:
-                from flask_jwt_extended import decode_token
-                decoded_token = decode_token(token)
-                user_id = int(decoded_token['sub'])  # Convert to integer for database queries
-                
-                # Reschedule sync job
-                schedule_sync_job(user_id)
-            except:
-                pass
-        
-        return response
-    
-    # Replace the update_sync_settings function
-    update_sync_settings = new_update_sync_settings
-    
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+

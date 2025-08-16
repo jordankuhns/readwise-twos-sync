@@ -7,6 +7,7 @@ import os
 import tempfile
 from unittest.mock import Mock, patch
 from cryptography.fernet import Fernet
+from datetime import datetime
 
 # Set test environment
 os.environ['FLASK_ENV'] = 'testing'
@@ -72,18 +73,19 @@ def auth_headers(app, client):
 @pytest.fixture
 def mock_readwise_api():
     """Mock Readwise API responses."""
+    now = datetime.utcnow().isoformat() + "Z"
     mock_highlights = [
         {
             "id": 1,
             "text": "This is a test highlight",
             "book_id": 1,
-            "updated": "2023-01-01T10:00:00Z"
+            "updated": now
         },
         {
             "id": 2,
             "text": "Another test highlight",
             "book_id": 2,
-            "updated": "2023-01-01T11:00:00Z"
+            "updated": now
         }
     ]
     
@@ -122,8 +124,8 @@ def mock_readwise_api():
         yield mock_get
 
 @pytest.fixture
-def mock_twos_api():
-    """Mock Twos API responses."""
+def mock_post_requests():
+    """Mock external POST requests to third-party services."""
     with patch('requests.post') as mock_post:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -131,3 +133,4 @@ def mock_twos_api():
         mock_response.text = "Success"
         mock_post.return_value = mock_response
         yield mock_post
+

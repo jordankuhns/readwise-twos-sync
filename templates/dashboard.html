@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Readwise to Twos Sync</title>
+    <title>Dashboard | Readwise to Twos/Capacities Sync</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
@@ -259,7 +259,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="/">📚 Readwise → Twos Sync</a>
+            <a class="navbar-brand" href="/">📚 Readwise → Twos/Capacities Sync</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -363,6 +363,16 @@
                             <label class="form-label">Twos API Token</label>
                             <div class="api-key" id="twos-token">••••••••••••</div>
                         </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Capacities Space ID</label>
+                            <div class="api-key" id="capacities-space-id">Not set</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Capacities API Token</label>
+                            <div class="api-key" id="capacities-token">Not set</div>
+                        </div>
                         
                         <div class="d-grid">
                             <button class="btn btn-primary" id="update-credentials-btn">
@@ -417,19 +427,49 @@
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="twos_user_id" class="form-label">Twos User ID</label>
-                            <input type="text" class="form-control" id="twos_user_id" required>
-                            <div class="form-text">
-                                Find this in your Twos app: Settings → API
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="enable_twos" checked>
+                            <label class="form-check-label" for="enable_twos">Sync to Twos</label>
+                        </div>
+
+                        <div id="twos-section">
+                            <div class="mb-3">
+                                <label for="twos_user_id" class="form-label">Twos User ID</label>
+                                <input type="text" class="form-control" id="twos_user_id">
+                                <div class="form-text">
+                                    Find this in your Twos app: Settings → API
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="twos_token" class="form-label">Twos API Token</label>
+                                <input type="text" class="form-control" id="twos_token">
+                                <div class="form-text">
+                                    Find this in your Twos app: Settings → API
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="twos_token" class="form-label">Twos API Token</label>
-                            <input type="text" class="form-control" id="twos_token" required>
-                            <div class="form-text">
-                                Find this in your Twos app: Settings → API
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="enable_capacities">
+                            <label class="form-check-label" for="enable_capacities">Sync to Capacities</label>
+                        </div>
+
+                        <div id="capacities-section" style="display: none;">
+                            <div class="mb-3">
+                                <label for="capacities_space_id" class="form-label">Capacities Space ID</label>
+                                <input type="text" class="form-control" id="capacities_space_id">
+                                <div class="form-text">
+                                    From your Capacities workspace settings
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="capacities_token" class="form-label">Capacities API Token</label>
+                                <input type="text" class="form-control" id="capacities_token">
+                                <div class="form-text">
+                                    Generate a token in Capacities account settings
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -498,6 +538,12 @@
     <script>
         // API URL
         const API_URL = 'https://web-production-0b0f42.up.railway.app';
+        let currentCredentials = null;
+
+        function maskToken(token) {
+            if (!token) return 'Not set';
+            return token.length > 8 ? `${token.slice(0,4)}...${token.slice(-4)}` : '****';
+        }
         
         // Check if user is logged in
         function checkAuth() {
@@ -562,8 +608,9 @@
                 }
                 
                 const credentials = await response.json();
+                currentCredentials = credentials;
                 updateCredentialsDisplay(credentials);
-                
+
                 return credentials;
             } catch (error) {
                 console.error('Error fetching credentials:', error);
@@ -631,9 +678,31 @@
         
         // Update credentials display
         function updateCredentialsDisplay(credentials) {
-            document.getElementById('readwise-token').textContent = credentials.readwise_token;
-            document.getElementById('twos-user-id').textContent = credentials.twos_user_id;
-            document.getElementById('twos-token').textContent = credentials.twos_token;
+            document.getElementById('readwise-token').textContent = maskToken(credentials.readwise_token);
+            document.getElementById('twos-user-id').textContent = credentials.twos_user_id || 'Not set';
+            document.getElementById('twos-token').textContent = maskToken(credentials.twos_token);
+            document.getElementById('capacities-space-id').textContent = credentials.capacities_space_id || 'Not set';
+            document.getElementById('capacities-token').textContent = maskToken(credentials.capacities_token);
+        }
+
+        function toggleTwosFields() {
+            const enabled = document.getElementById('enable_twos').checked;
+            document.getElementById('twos-section').style.display = enabled ? '' : 'none';
+            ['twos_user_id', 'twos_token'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = !enabled;
+                el.required = enabled;
+            });
+        }
+
+        function toggleCapacitiesFields() {
+            const enabled = document.getElementById('enable_capacities').checked;
+            document.getElementById('capacities-section').style.display = enabled ? '' : 'none';
+            ['capacities_space_id', 'capacities_token'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = !enabled;
+                el.required = enabled;
+            });
         }
         
         // Update history display
@@ -840,13 +909,29 @@
         async function updateCredentials() {
             const token = checkAuth();
             if (!token) return;
-            
+
             const readwiseToken = document.getElementById('readwise_token').value;
+            const enableTwos = document.getElementById('enable_twos').checked;
+            const enableCapacities = document.getElementById('enable_capacities').checked;
             const twosUserId = document.getElementById('twos_user_id').value;
             const twosToken = document.getElementById('twos_token').value;
-            
-            if (!readwiseToken || !twosUserId || !twosToken) {
-                alert('All fields are required');
+            const capacitiesSpaceId = document.getElementById('capacities_space_id').value;
+            const capacitiesToken = document.getElementById('capacities_token').value;
+
+            if (!readwiseToken) {
+                alert('Readwise token is required');
+                return;
+            }
+            if (!enableTwos && !enableCapacities) {
+                alert('Select at least one destination');
+                return;
+            }
+            if (enableTwos && (!twosUserId || !twosToken)) {
+                alert('Twos fields are required');
+                return;
+            }
+            if (enableCapacities && (!capacitiesSpaceId || !capacitiesToken)) {
+                alert('Capacities fields are required');
                 return;
             }
             
@@ -863,8 +948,10 @@
                     },
                     body: JSON.stringify({
                         readwise_token: readwiseToken,
-                        twos_user_id: twosUserId,
-                        twos_token: twosToken
+                        twos_user_id: enableTwos ? twosUserId : null,
+                        twos_token: enableTwos ? twosToken : null,
+                        capacities_space_id: enableCapacities ? capacitiesSpaceId : null,
+                        capacities_token: enableCapacities ? capacitiesToken : null
                     })
                 });
                 
@@ -930,11 +1017,26 @@
             document.getElementById('save-sync-time-btn').addEventListener('click', updateSyncTime);
             
             // Update credentials button
-            document.getElementById('update-credentials-btn').addEventListener('click', () => {
+            document.getElementById('update-credentials-btn').addEventListener('click', async () => {
+                if (!currentCredentials) {
+                    currentCredentials = await fetchCredentials();
+                }
+                document.getElementById('readwise_token').value = currentCredentials?.readwise_token || '';
+                document.getElementById('twos_user_id').value = currentCredentials?.twos_user_id || '';
+                document.getElementById('twos_token').value = currentCredentials?.twos_token || '';
+                document.getElementById('capacities_space_id').value = currentCredentials?.capacities_space_id || '';
+                document.getElementById('capacities_token').value = currentCredentials?.capacities_token || '';
+                document.getElementById('enable_twos').checked = Boolean(currentCredentials?.twos_user_id && currentCredentials?.twos_token);
+                document.getElementById('enable_capacities').checked = Boolean(currentCredentials?.capacities_space_id && currentCredentials?.capacities_token);
+                toggleTwosFields();
+                toggleCapacitiesFields();
                 const modal = new bootstrap.Modal(document.getElementById('update-credentials-modal'));
                 modal.show();
             });
-            
+
+            document.getElementById('enable_twos').addEventListener('change', toggleTwosFields);
+            document.getElementById('enable_capacities').addEventListener('change', toggleCapacitiesFields);
+
             // Save credentials button
             document.getElementById('save-credentials-btn').addEventListener('click', updateCredentials);
             
@@ -943,6 +1045,8 @@
                 e.preventDefault();
                 logout();
             });
+            toggleTwosFields();
+            toggleCapacitiesFields();
         });
     </script>
 </body>

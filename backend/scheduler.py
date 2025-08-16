@@ -14,6 +14,11 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 from cryptography.fernet import Fernet
 import pytz
+try:
+    from .db_utils import ensure_capacities_columns
+except ImportError:  # pragma: no cover
+    from db_utils import ensure_capacities_columns
+from readwise_twos_sync.capacities_client import CapacitiesClient
 
 # Load environment variables
 load_dotenv()
@@ -29,6 +34,7 @@ if DATABASE_URL.startswith('postgres://'):
 
 # Create database engine and session
 engine = sa.create_engine(DATABASE_URL)
+ensure_capacities_columns(engine)
 Session = sessionmaker(bind=engine)
 
 # Encryption for API tokens
@@ -60,6 +66,8 @@ api_credentials = sa.Table(
     sa.Column('readwise_token', sa.Text),
     sa.Column('twos_user_id', sa.String(255)),
     sa.Column('twos_token', sa.Text),
+    sa.Column('capacities_space_id', sa.String(255)),
+    sa.Column('capacities_token', sa.Text),
 )
 
 sync_logs = sa.Table(
@@ -190,11 +198,12 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
             
         except requests.RequestException as e:
             logger.error(f"Failed to post highlight: {e}")
-    
+
     return successful_posts
 
-def perform_sync(readwise_token, twos_user_id, twos_token, days_back=1, user_id=None):
-    """Perform a sync from Readwise to Twos."""
+
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=1, user_id=None):
+    """Perform a sync from Readwise to Twos and Capacities."""
     logger.info(f"Starting sync for user {user_id}, looking back {days_back} days")
     
     try:
@@ -204,19 +213,26 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=1, user_id=
         
         # Fetch highlights
         highlights = fetch_highlights_since(readwise_token, since)
-        
+
+        capacities_client = None
+        if capacities_token and capacities_space_id:
+            capacities_client = CapacitiesClient(
+                token=capacities_token, space_id=capacities_space_id
+            )
+
         if highlights:
-            # Fetch books metadata
             books = fetch_all_books(readwise_token)
-            
-            # Post to Twos
-            post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            
-            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+            if twos_user_id and twos_token:
+                post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
+            if capacities_client:
+                capacities_client.post_highlights(highlights, books)
+            message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            # Still post a message to Twos
-            post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            message = "No new highlights found, but posted update to Twos."
+            if twos_user_id and twos_token:
+                post_highlights_to_twos([], {}, twos_user_id, twos_token)
+            if capacities_client:
+                capacities_client.post_highlights([], {})
+            message = "No new highlights found, but posted update to destinations."
         
         # Log successful sync
         if user_id:
@@ -275,13 +291,22 @@ def run_scheduled_sync(user_id):
     try:
         # Decrypt tokens
         readwise_token = cipher_suite.decrypt(creds_result.readwise_token.encode()).decode()
-        twos_token = cipher_suite.decrypt(creds_result.twos_token.encode()).decode()
-        
+        twos_token = (
+            cipher_suite.decrypt(creds_result.twos_token.encode()).decode()
+            if creds_result.twos_token else None
+        )
+        capacities_token = (
+            cipher_suite.decrypt(creds_result.capacities_token.encode()).decode()
+            if creds_result.capacities_token else None
+        )
+
         # Perform sync (only 1 day back for scheduled syncs)
         result = perform_sync(
             readwise_token=readwise_token,
             twos_user_id=creds_result.twos_user_id,
             twos_token=twos_token,
+            capacities_token=capacities_token,
+            capacities_space_id=creds_result.capacities_space_id,
             days_back=1,  # Only sync yesterday's highlights
             user_id=user_id
         )

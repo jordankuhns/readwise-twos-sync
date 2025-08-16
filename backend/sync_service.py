@@ -1,23 +1,26 @@
 """
-Sync service for Readwise to Twos
+Sync service for Readwise to Twos and Capacities
 """
 
 import requests
 import logging
 from datetime import datetime, timedelta
+from readwise_twos_sync.capacities_client import CapacitiesClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=None):
+def perform_sync(readwise_token, twos_user_id, twos_token, capacities_token=None, capacities_space_id=None, days_back=7, user_id=None):
     """
-    Perform a sync from Readwise to Twos.
+    Perform a sync from Readwise to Twos and Capacities.
     
     Args:
         readwise_token: Readwise API token
         twos_user_id: Twos user ID
         twos_token: Twos API token
+        capacities_token: Capacities API token
+        capacities_space_id: Capacities space identifier
         days_back: Number of days to look back for highlights
         user_id: User ID for logging (optional)
         
@@ -33,19 +36,24 @@ def perform_sync(readwise_token, twos_user_id, twos_token, days_back=7, user_id=
         
         # Fetch highlights
         highlights = fetch_highlights_since(readwise_token, since)
-        
+
+        capacities_client = None
+        if capacities_token and capacities_space_id:
+            capacities_client = CapacitiesClient(
+                token=capacities_token, space_id=capacities_space_id
+            )
+
         if highlights:
-            # Fetch books metadata
             books = fetch_all_books(readwise_token)
-            
-            # Post to Twos
             post_highlights_to_twos(highlights, books, twos_user_id, twos_token)
-            
-            message = f"Successfully synced {len(highlights)} highlights to Twos!"
+            if capacities_client:
+                capacities_client.post_highlights(highlights, books)
+            message = f"Successfully synced {len(highlights)} highlights to destinations!"
         else:
-            # Still post a message to Twos
             post_highlights_to_twos([], {}, twos_user_id, twos_token)
-            message = "No new highlights found, but posted update to Twos."
+            if capacities_client:
+                capacities_client.post_highlights([], {})
+            message = "No new highlights found, but posted update to destinations."
         
         # Return success info for logging by caller
         
@@ -179,3 +187,4 @@ def post_highlights_to_twos(highlights, books, twos_user_id, twos_token):
     logger.info(f"Posted {successful_posts} highlights to Twos")
     if failed_posts > 0:
         logger.warning(f"Failed to post {failed_posts} highlights")
+
