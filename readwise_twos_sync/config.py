@@ -28,14 +28,14 @@ class Config:
         return os.environ["READWISE_TOKEN"]
 
     @property
-    def twos_user_id(self) -> str:
-        """Get Twos user ID."""
-        return os.environ["TWOS_USER_ID"]
+    def twos_user_id(self) -> Optional[str]:
+        """Get Twos user ID if provided."""
+        return os.environ.get("TWOS_USER_ID")
 
     @property
-    def twos_token(self) -> str:
-        """Get Twos API token."""
-        return os.environ["TWOS_TOKEN"]
+    def twos_token(self) -> Optional[str]:
+        """Get Twos API token if provided."""
+        return os.environ.get("TWOS_TOKEN")
 
     @property
     def capacities_token(self) -> Optional[str]:
@@ -59,27 +59,42 @@ class Config:
 
     def _validate_required_vars(self):
         """Validate that all required environment variables are set."""
-        required_vars = ["READWISE_TOKEN", "TWOS_USER_ID", "TWOS_TOKEN"]
-        missing_vars = [var for var in required_vars if not os.environ.get(var)]
+        if not os.environ.get("READWISE_TOKEN"):
+            raise ValueError("Missing required environment variable: READWISE_TOKEN")
 
-        if missing_vars:
-            raise ValueError(
-                f"Missing required environment variables: {', '.join(missing_vars)}\n"
-                "Please set these in your environment or .env file.",
-            )
-
-        # Capacities credentials are optional, but if one is provided,
-        # ensure both CAPACITIES_TOKEN and CAPACITIES_SPACE_ID are set.
+        # Collect provided credentials
+        twos_user = os.environ.get("TWOS_USER_ID")
+        twos_token = os.environ.get("TWOS_TOKEN")
         cap_token = os.environ.get("CAPACITIES_TOKEN")
         cap_space = os.environ.get("CAPACITIES_SPACE_ID")
+
+        # Validate Twos credentials if either is provided
+        if twos_user or twos_token:
+            missing = []
+            if not twos_user:
+                missing.append("TWOS_USER_ID")
+            if not twos_token:
+                missing.append("TWOS_TOKEN")
+            if missing:
+                raise ValueError(
+                    f"Missing required Twos environment variables: {', '.join(missing)}"
+                )
+
+        # Validate Capacities credentials if either is provided
         if cap_token or cap_space:
-            if not (cap_token and cap_space):
-                missing = []
-                if not cap_token:
-                    missing.append("CAPACITIES_TOKEN")
-                if not cap_space:
-                    missing.append("CAPACITIES_SPACE_ID")
+            missing = []
+            if not cap_token:
+                missing.append("CAPACITIES_TOKEN")
+            if not cap_space:
+                missing.append("CAPACITIES_SPACE_ID")
+            if missing:
                 raise ValueError(
                     f"Missing required Capacities environment variables: {', '.join(missing)}"
                 )
+
+        # Ensure at least one destination is configured
+        if not ((twos_user and twos_token) or (cap_token and cap_space)):
+            raise ValueError(
+                "Please provide Twos or Capacities credentials to enable syncing"
+            )
 
